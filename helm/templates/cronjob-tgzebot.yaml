@@ -1,0 +1,27 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  namespace: {{ .Values.Namespace }}
+  name: tgzebot
+spec:
+  concurrencyPolicy: Forbid
+  suspend: false
+  schedule: "{{ .Values.CronSchedule }}"
+  successfulJobsHistoryLimit: 6
+  failedJobsHistoryLimit: 6
+  jobTemplate:
+    metadata:
+      name: tgzebot
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: tgzebot
+            imagePullPolicy: Always
+            image: {{ .Values.ImageName }}:{{ .Values.ImageTag }}
+            envFrom:
+              - configMapRef:
+                  name: tgzebot
