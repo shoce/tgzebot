@@ -22,6 +22,8 @@ github.com/google/pprof v0.0.0-20230912144702-c363fe2c2ed8/go.mod h1:czg5+yv1E0Z
 github.com/ianlancetaylor/demangle v0.0.0-20220319035150-800ac71e25c2/go.mod h1:aYm2/VgdVmcIU8iMfdMvDMsRAQjcfZSKFby6HOFvi/w=
 github.com/kkdai/youtube/v2 v2.8.4 h1:Yw9V4B1y2XSeFBRXuA/UD9x1i3hKZebg5BUtyYn6VsY=
 github.com/kkdai/youtube/v2 v2.8.4/go.mod h1:VPQwegyWSjwNxrg5da07u2YjX7bliRG6rPzZr+eb/pc=
+github.com/kkdai/youtube/v2 v2.9.0 h1:J7BvfIsxEyyd1MmB/75LgDvG8BGGsG9bSHpbo/qIb+8=
+github.com/kkdai/youtube/v2 v2.9.0/go.mod h1:H0ntZBgaah4F0wxnEUkLa6yUeyTDDg06xFJ3tvA6gOw=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.0 h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=

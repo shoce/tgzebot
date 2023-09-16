@@ -1,9 +1,11 @@
 module github.com/shoce/tgzebot
 
-go 1.20
+go 1.21
+
+toolchain go1.21.1
 
 require (
-	github.com/kkdai/youtube/v2 v2.8.4
+	github.com/kkdai/youtube/v2 v2.9.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 

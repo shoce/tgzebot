@@ -1374,6 +1374,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("GetStreamContext: %w", err)
 	}
 	defer ytstream.Close()
+
 	if ytstreamsize == 0 {
 		return fmt.Errorf("GetStreamContext: stream size is zero")
 	}
