@@ -1141,6 +1141,10 @@ func main() {
 						break
 					}
 				}
+
+				if len(videos) > 1 {
+					time.Sleep(33 * time.Second)
+				}
 			}
 
 			if postingerr == nil {
