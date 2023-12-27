@@ -1142,8 +1142,8 @@ func main() {
 					}
 				}
 
-				if len(videos) > 1 {
-					time.Sleep(33 * time.Second)
+				if len(videos) > 3 {
+					time.Sleep(11 * time.Second)
 				}
 			}
 
