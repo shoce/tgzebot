@@ -1228,12 +1228,14 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("Create file: %w", err)
 	}
 
-	downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel)
-	if v.PlaylistId != "" && v.PlaylistTitle != "" {
-		downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
-	}
-	if downloadingmessage, err := tgsendMessage(downloadingmessagetext, m.Chat.Id, "", 0); err == nil && downloadingmessage != nil {
-		tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadingmessage.MessageId})
+	if DEBUG {
+		downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel)
+		if v.PlaylistId != "" && v.PlaylistTitle != "" {
+			downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
+		}
+		if downloadingmessage, err := tgsendMessage(downloadingmessagetext, m.Chat.Id, "", 0); err == nil && downloadingmessage != nil {
+			tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadingmessage.MessageId})
+		}
 	}
 
 	t0 := time.Now()
@@ -1250,13 +1252,15 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log("Downloaded video in %v", time.Since(t0).Truncate(time.Second))
-	downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
-	if targetVideoBitrateKbps > 0 {
-		downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
-	}
-	downloadedmessage, err := tgsendMessage(downloadedmessagetext, m.Chat.Id, "", 0)
-	if err == nil && downloadedmessage != nil {
-		tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadedmessage.MessageId})
+	if DEBUG {
+		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
+		if targetVideoBitrateKbps > 0 {
+			downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
+		}
+		downloadedmessage, err := tgsendMessage(downloadedmessagetext, m.Chat.Id, "", 0)
+		if err == nil && downloadedmessage != nil {
+			tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadedmessage.MessageId})
+		}
 	}
 
 	if targetVideoBitrateKbps > 0 {
@@ -1402,12 +1406,14 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("Create file: %w", err)
 	}
 
-	downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024)
-	if v.PlaylistId != "" && v.PlaylistTitle != "" {
-		downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
-	}
-	if downloadingmessage, err := tgsendMessage(downloadingmessagetext, m.Chat.Id, "", 0); err == nil && downloadingmessage != nil {
-		tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadingmessage.MessageId})
+	if DEBUG {
+		downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024)
+		if v.PlaylistId != "" && v.PlaylistTitle != "" {
+			downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
+		}
+		if downloadingmessage, err := tgsendMessage(downloadingmessagetext, m.Chat.Id, "", 0); err == nil && downloadingmessage != nil {
+			tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadingmessage.MessageId})
+		}
 	}
 
 	t0 := time.Now()
@@ -1424,13 +1430,15 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log("Downloaded audio in %v", time.Since(t0).Truncate(time.Second))
-	downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
-	if targetAudioBitrateKbps > 0 {
-		downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps", targetAudioBitrateKbps)
-	}
-	downloadedmessage, err := tgsendMessage(downloadedmessagetext, m.Chat.Id, "", 0)
-	if err == nil && downloadedmessage != nil {
-		tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadedmessage.MessageId})
+	if DEBUG {
+		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
+		if targetAudioBitrateKbps > 0 {
+			downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps", targetAudioBitrateKbps)
+		}
+		downloadedmessage, err := tgsendMessage(downloadedmessagetext, m.Chat.Id, "", 0)
+		if err == nil && downloadedmessage != nil {
+			tgdeleteMessages = append(tgdeleteMessages, TgChatMessageId{m.Chat.Id, downloadedmessage.MessageId})
+		}
 	}
 
 	if targetAudioBitrateKbps > 0 {
