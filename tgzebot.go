@@ -278,6 +278,8 @@ func (uat *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, err
 }
 
 var (
+	DEBUG bool
+
 	YamlConfigPath = "tgzebot.yaml"
 
 	KvToken       string
@@ -400,7 +402,9 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 }
 
 func GetVar(name string) (value string) {
-	//log("DEBUG GetVar: %s", name)
+	if DEBUG {
+		log("DEBUG GetVar: %s", name)
+	}
 
 	var err error
 
@@ -432,7 +436,9 @@ func GetVar(name string) (value string) {
 }
 
 func SetVar(name, value string) (err error) {
-	//log("DEBUG SetVar: %s: %s", name, value)
+	if DEBUG {
+		log("DEBUG SetVar: %s: %s", name, value)
+	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		err = KvSet(name, value)
