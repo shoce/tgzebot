@@ -1183,7 +1183,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}(&tgdeleteMessages)
 
-	for _, f := range vinfo.Formats {
+	for _, f := range vinfo.Formats.WithAudioChannels() {
 		if !strings.Contains(f.MimeType, "/mp4") {
 			continue
 		}
@@ -1360,7 +1360,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}(&tgdeleteMessages)
 
-	for _, f := range vinfo.Formats {
+	for _, f := range vinfo.Formats.WithAudioChannels() {
 		if !strings.Contains(f.MimeType, "/mp4") {
 			continue
 		}
