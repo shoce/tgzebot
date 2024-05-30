@@ -310,7 +310,7 @@ var (
 	TgUpdateLog []int64
 	TgZeChatId  int64
 
-	TgMaxFileSize      int64 = 50 * 1000 * 1000
+	TgMaxFileSizeBytes      int64 = 50 * 1000 * 1000
 	TgAudioBitrateKbps int64 = 50
 
 	FfmpegPath          string = "./ffmpeg"
@@ -1192,11 +1192,11 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
 		if strings.HasPrefix(f.MimeType, "video/mp4") && f.QualityLabel != "" && f.AudioQuality != "" {
-			log("format: ContentLength:%dMB Language:%v", f.ContentLength<<20, f.LanguageDisplayName())
+			log("format: ContentLength:%dMB Language:%+v", f.ContentLength>>20, f.LanguageDisplayName())
 			if videoSmallestFormat.ItagNo == 0 || f.Bitrate < videoSmallestFormat.Bitrate {
 				videoSmallestFormat = f
 			}
-			if fsize < TgMaxFileSize && f.Bitrate > videoFormat.Bitrate {
+			if fsize < TgMaxFileSizeBytes && f.Bitrate > videoFormat.Bitrate {
 				videoFormat = f
 			}
 		}
@@ -1205,7 +1205,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	var targetVideoBitrateKbps int64
 	if videoFormat.ItagNo == 0 {
 		videoFormat = videoSmallestFormat
-		targetVideoSize := int64(TgMaxFileSize - (TgAudioBitrateKbps*1024*int64(vinfo.Duration.Seconds()+1))/8)
+		targetVideoSize := int64(TgMaxFileSizeBytes - (TgAudioBitrateKbps*1024*int64(vinfo.Duration.Seconds()+1))/8)
 		targetVideoBitrateKbps = int64(((targetVideoSize * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
@@ -1369,11 +1369,11 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
 		if strings.HasPrefix(f.MimeType, "audio/mp4") {
-			log("format: ContentLength:%dMB Language:%v", f.ContentLength<<20, f.LanguageDisplayName())
+			log("format: ContentLength:%dMB Language:%+v", f.ContentLength>>20, f.LanguageDisplayName())
 			if audioSmallestFormat.ItagNo == 0 || f.Bitrate < audioSmallestFormat.Bitrate {
 				audioSmallestFormat = f
 			}
-			if fsize < TgMaxFileSize && f.Bitrate > audioFormat.Bitrate {
+			if fsize < TgMaxFileSizeBytes && f.Bitrate > audioFormat.Bitrate {
 				audioFormat = f
 			}
 		}
@@ -1382,7 +1382,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	var targetAudioBitrateKbps int64
 	if audioFormat.ItagNo == 0 {
 		audioFormat = audioSmallestFormat
-		targetAudioBitrateKbps = int64(((TgMaxFileSize * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
+		targetAudioBitrateKbps = int64(((TgMaxFileSizeBytes * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
 	ytstream, ytstreamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &audioFormat)
