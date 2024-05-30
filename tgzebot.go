@@ -1192,7 +1192,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
 		if strings.HasPrefix(f.MimeType, "video/mp4") && f.QualityLabel != "" && f.AudioQuality != "" {
-			log("video format: %+v", f)
+			log("format: ItagNo:%s AverageBitrate:%s Language:%s", f.ItagNo, f.AverageBitrate, f.LanguageDisplayName())
 			if videoSmallestFormat.ItagNo == 0 || f.Bitrate < videoSmallestFormat.Bitrate {
 				videoSmallestFormat = f
 			}
@@ -1369,7 +1369,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
 		if strings.HasPrefix(f.MimeType, "audio/mp4") {
-			log("audio format: %+v", f)
+			log("format: ItagNo:%s AverageBitrate:%s Language:%s", f.ItagNo, f.AverageBitrate, f.LanguageDisplayName())
 			if audioSmallestFormat.ItagNo == 0 || f.Bitrate < audioSmallestFormat.Bitrate {
 				audioSmallestFormat = f
 			}
