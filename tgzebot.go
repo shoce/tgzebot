@@ -310,8 +310,9 @@ var (
 	TgUpdateLog []int64
 	TgZeChatId  int64
 
-	TgMaxFileSizeBytes int64 = 50 << 20
-	TgAudioBitrateKbps int64 = 50
+	TgMaxFileSizeBytes int64    = 50 << 20
+	TgAudioBitrateKbps int64    = 50
+	DownloadLanguages  []string = []string{"english", "german", "russian", "ukrainian"}
 
 	FfmpegPath          string = "./ffmpeg"
 	FfmpegGlobalOptions        = []string{"-v", "error"}
@@ -1191,14 +1192,27 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		if fsize == 0 {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
-		if strings.HasPrefix(f.MimeType, "video/mp4") && f.QualityLabel != "" && f.AudioQuality != "" {
-			log("format: ContentLength:%dKB Language:%#v", f.ContentLength>>10, f.LanguageDisplayName())
-			if videoSmallestFormat.ItagNo == 0 || f.Bitrate < videoSmallestFormat.Bitrate {
-				videoSmallestFormat = f
+		if !strings.HasPrefix(f.MimeType, "video/mp4") || f.QualityLabel == "" || f.AudioQuality == "" {
+			continue
+		}
+		flang := strings.ToLower(f.LanguageDisplayName())
+		log("format: ContentLength:%dMB Language:%#v", f.ContentLength>>20, flang)
+		if flang != "" {
+			skip := true
+			for _, l := range DownloadLanguages {
+				if strings.Contains(flang, l) {
+					skip = false
+				}
 			}
-			if fsize < TgMaxFileSizeBytes && f.Bitrate > videoFormat.Bitrate {
-				videoFormat = f
+			if skip {
+				continue
 			}
+		}
+		if videoSmallestFormat.ItagNo == 0 || f.Bitrate < videoSmallestFormat.Bitrate {
+			videoSmallestFormat = f
+		}
+		if fsize < TgMaxFileSizeBytes && f.Bitrate > videoFormat.Bitrate {
+			videoFormat = f
 		}
 	}
 
@@ -1368,14 +1382,27 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		if fsize == 0 {
 			fsize = int64(f.Bitrate / 8 * int(vinfo.Duration.Seconds()))
 		}
-		if strings.HasPrefix(f.MimeType, "audio/mp4") {
-			log("format: ContentLength:%dKB Language:%#v", f.ContentLength>>10, f.LanguageDisplayName())
-			if audioSmallestFormat.ItagNo == 0 || f.Bitrate < audioSmallestFormat.Bitrate {
-				audioSmallestFormat = f
+		if !strings.HasPrefix(f.MimeType, "audio/mp4") {
+			continue
+		}
+		flang := strings.ToLower(f.LanguageDisplayName())
+		log("format: ContentLength:%dMB Language:%#v", f.ContentLength>>20, flang)
+		if flang != "" {
+			skip := true
+			for _, l := range DownloadLanguages {
+				if strings.Contains(flang, l) {
+					skip = false
+				}
 			}
-			if fsize < TgMaxFileSizeBytes && f.Bitrate > audioFormat.Bitrate {
-				audioFormat = f
+			if skip {
+				continue
 			}
+		}
+		if audioSmallestFormat.ItagNo == 0 || f.Bitrate < audioSmallestFormat.Bitrate {
+			audioSmallestFormat = f
+		}
+		if fsize < TgMaxFileSizeBytes && f.Bitrate > audioFormat.Bitrate {
+			audioFormat = f
 		}
 	}
 
