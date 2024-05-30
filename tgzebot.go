@@ -1230,11 +1230,12 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	defer ytstream.Close()
 
 	log(
-		"Youtube video size:%dmb quality:%s bitrate:%dkbps duration:%s",
-		ytstreamsize/1000/1000,
+		"Downloading youtube video size:%dMB quality:%s bitrate:%dkbps duration:%s language:%#v",
+		ytstreamsize>>20,
 		videoFormat.QualityLabel,
-		videoFormat.Bitrate/1024,
+		videoFormat.Bitrate>>10,
 		vinfo.Duration,
+		videoFormat.LanguageDisplayName(),
 	)
 
 	var tgvideo *TgVideo
@@ -1423,10 +1424,11 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log(
-		"Downloading youtube audio size:%dmb bitrate:%dkbps duration:%s",
-		ytstreamsize/1000/1000,
-		audioFormat.Bitrate/1024,
+		"Downloading youtube audio size:%dMB bitrate:%dkbps duration:%s language:%#v",
+		ytstreamsize>>20,
+		audioFormat.Bitrate>>10,
 		vinfo.Duration,
+		audioFormat.LanguageDisplayName(),
 	)
 
 	var tgaudio *TgAudio
