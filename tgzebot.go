@@ -310,7 +310,7 @@ var (
 	TgUpdateLog []int64
 	TgZeChatId  int64
 
-	TgMaxFileSizeBytes int64    = 50 << 20
+	TgMaxFileSizeBytes int64    = 52 * 1000 * 1000
 	TgAudioBitrateKbps int64    = 50
 	DownloadLanguages  []string = []string{"english", "german", "russian", "ukrainian"}
 
