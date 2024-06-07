@@ -233,6 +233,7 @@ type TgGetUpdatesResponse struct {
 type TgChatMemberUpdated struct {
 	Chat                    TgChat       `json:"chat"`
 	From                    TgUser       `json:"from"`
+	Date                    int64        `json:"date"`
 	OldChatMember           TgChatMember `json:"old_chat_member"`
 	NewChatMember           TgChatMember `json:"new_chat_member"`
 	ViaJoinRequest          bool         `json:"via_join_request"`
@@ -240,12 +241,12 @@ type TgChatMemberUpdated struct {
 }
 
 type TgUpdate struct {
-	UpdateId          int64               `json:"update_id"`
-	Message           TgMessage           `json:"message"`
-	EditedMessage     TgMessage           `json:"edited_message"`
-	ChannelPost       TgMessage           `json:"channel_post"`
-	EditedChannelPost TgMessage           `json:"edited_channel_post"`
-	ChatMemberUpdated TgChatMemberUpdated `json:"my_chat_member"`
+	UpdateId            int64               `json:"update_id"`
+	Message             TgMessage           `json:"message"`
+	EditedMessage       TgMessage           `json:"edited_message"`
+	ChannelPost         TgMessage           `json:"channel_post"`
+	EditedChannelPost   TgMessage           `json:"edited_channel_post"`
+	MyChatMemberUpdated TgChatMemberUpdated `json:"my_chat_member"`
 }
 
 type TgGetChatResponse struct {
@@ -964,8 +965,8 @@ func main() {
 			m = u.EditedChannelPost
 			ischannelpost = true
 			iseditmessage = true
-		} else if u.ChatMemberUpdated.Chat.Id != 0 {
-			cmu := u.ChatMemberUpdated
+		} else if u.MyChatMemberUpdated.Date != 0 {
+			cmu := u.MyChatMemberUpdated
 			report := fmt.Sprintf(
 				"*MyChatMemberUpdated*"+NL+
 					"from: \\@%s id:%d"+NL+
@@ -983,8 +984,8 @@ func main() {
 				log("tgsendMessage: %v", err)
 			}
 		} else {
-			log("Unsupported type of update received:"+NL+"%s", respjson)
-			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update received:"+NL+"```"+NL+"%s"+NL+"```", respjson), TgZeChatId, "MarkdownV2", 0)
+			log("Unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
+			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 				continue
