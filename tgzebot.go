@@ -385,10 +385,10 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 		return fmt.Errorf("json.Decoder.Decode: %w", err)
 	}
 
-	log("response body:"+NL+"%s", respBody.String())
+	log("getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody.String())
 	if respjson != nil {
 		*respjson = respBody.String()
-		log("respjson:"+NL+"%s", *respjson)
+		log("getJson %s respjson:"+NL+"%s", url, *respjson)
 	}
 
 	return nil
