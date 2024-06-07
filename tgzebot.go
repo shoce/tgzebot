@@ -385,9 +385,11 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 		return fmt.Errorf("json.Decoder.Decode: %w", err)
 	}
 
+	log("response body:"+NL+"%s", rbody.String())
 	if respjson != nil {
 		*respjson = rbody.String()
 	}
+	log("respjson:"+NL+"%s", rbody.String())
 	return nil
 }
 
@@ -796,9 +798,8 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 	}
 	getUpdatesUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d", TgToken, offset)
 	var tgResp TgGetUpdatesResponse
-	var tgRespJson string
 
-	err = getJson(getUpdatesUrl, &tgResp, &tgRespJson)
+	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
 	if err != nil {
 		return nil, "", err
 	}
@@ -806,7 +807,7 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 		return nil, "", fmt.Errorf("Tg response not ok: %s", tgResp.Description)
 	}
 
-	return tgResp.Result, tgRespJson, nil
+	return tgResp.Result, tgrespjson, nil
 }
 
 func tggetChat(chatid int64) (chat TgChat, err error) {
