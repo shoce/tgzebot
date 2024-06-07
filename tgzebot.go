@@ -367,14 +367,28 @@ func log(msg interface{}, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
-func getJson(url string, target interface{}) error {
+func getJson(url string, target interface{}, respjson *string) (err error) {
 	r, err := HttpClient.Get(url)
 	if err != nil {
 		return err
 	}
 	defer r.Body.Close()
 
-	return json.NewDecoder(r.Body).Decode(target)
+	rbody := bytes.NewBuffer(nil)
+	_, err = io.Copy(rbody, r.Body)
+	if err != nil {
+		return fmt.Errorf("io.Copy: %w", err)
+	}
+
+	err = json.NewDecoder(rbody).Decode(target)
+	if err != nil {
+		return fmt.Errorf("json.Decoder.Decode: %w", err)
+	}
+
+	if respjson != nil {
+		*respjson = rbody.String()
+	}
+	return nil
 }
 
 func postJson(url string, data *bytes.Buffer, target interface{}) error {
@@ -775,23 +789,24 @@ func init() {
 	}
 }
 
-func tggetUpdates() (uu []TgUpdate, err error) {
+func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 	var offset int64
 	if len(TgUpdateLog) > 0 {
 		offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
 	}
 	getUpdatesUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d", TgToken, offset)
 	var tgResp TgGetUpdatesResponse
+	var tgRespJson string
 
-	err = getJson(getUpdatesUrl, &tgResp)
+	err = getJson(getUpdatesUrl, &tgResp, &tgRespJson)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if !tgResp.Ok {
-		return nil, fmt.Errorf("Tg response not ok: %s", tgResp.Description)
+		return nil, "", fmt.Errorf("Tg response not ok: %s", tgResp.Description)
 	}
 
-	return tgResp.Result, nil
+	return tgResp.Result, tgRespJson, nil
 }
 
 func tggetChat(chatid int64) (chat TgChat, err error) {
@@ -800,7 +815,7 @@ func tggetChat(chatid int64) (chat TgChat, err error) {
 
 	tries := []int{1, 2, 3}
 	for ti, _ := range tries {
-		err = getJson(getChatUrl, &tgResp)
+		err = getJson(getChatUrl, &tgResp, nil)
 		if err != nil {
 			return TgChat{}, err
 		}
@@ -859,7 +874,7 @@ func tggetChatAdministrators(chatid int64) (mm []TgChatMember, err error) {
 	getChatAdministratorsUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getChatAdministrators?chat_id=%d", TgToken, chatid)
 	var tgResp TgGetChatAdministratorsResponse
 
-	err = getJson(getChatAdministratorsUrl, &tgResp)
+	err = getJson(getChatAdministratorsUrl, &tgResp, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -890,7 +905,8 @@ func main() {
 	}(&tgdeleteMessages)
 
 	var uu []TgUpdate
-	uu, err = tggetUpdates()
+	var respjson string
+	uu, respjson, err = tggetUpdates()
 	if err != nil {
 		log("tggetUpdates: %v", err)
 		os.Exit(1)
@@ -937,8 +953,8 @@ func main() {
 			ischannelpost = true
 			iseditmessage = true
 		} else {
-			log("Unsupported type of update received")
-			_, err = tgsendMessage("Unsupported type of update received", TgZeChatId, "", 0)
+			log("Unsupported type of update received:"+NL+"%s", respjson)
+			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update received:"+NL+"```"+NL+"%s"+NL+"```", respjson), TgZeChatId, "", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 				continue
@@ -1563,7 +1579,7 @@ func getList(ytlistid string) (ytitems []YtVideo, err error) {
 	// https://developers.google.com/youtube/v3/docs/playlists
 	var PlaylistUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlists?maxResults=%d&part=snippet&id=%s&key=%s", YtMaxResults, ytlistid, YtKey)
 	var playlists YtPlaylists
-	err = getJson(PlaylistUrl, &playlists)
+	err = getJson(PlaylistUrl, &playlists, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1588,7 +1604,7 @@ func getList(ytlistid string) (ytitems []YtVideo, err error) {
 		var PlaylistItemsUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlistItems?maxResults=%d&part=snippet&playlistId=%s&key=%s&pageToken=%s", YtMaxResults, ytlistid, YtKey, nextPageToken)
 
 		var playlistItems YtPlaylistItems
-		err = getJson(PlaylistItemsUrl, &playlistItems)
+		err = getJson(PlaylistItemsUrl, &playlistItems, nil)
 		if err != nil {
 			return nil, err
 		}
