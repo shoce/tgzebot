@@ -1040,7 +1040,7 @@ func main() {
 		} else {
 			log("tggetChatAdministrators: %v", err)
 		}
-		if shouldreport {
+		if shouldreport && m.MessageId != 0 {
 			report := fmt.Sprintf(
 				"%s"+NL+NL+
 					"%s"+NL+
