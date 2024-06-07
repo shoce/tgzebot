@@ -368,28 +368,29 @@ func log(msg interface{}, args ...interface{}) {
 }
 
 func getJson(url string, target interface{}, respjson *string) (err error) {
-	r, err := HttpClient.Get(url)
+	resp, err := HttpClient.Get(url)
 	if err != nil {
 		return err
 	}
-	defer r.Body.Close()
+	defer resp.Body.Close()
 
-	rbody := bytes.NewBuffer(nil)
-	_, err = io.Copy(rbody, r.Body)
+	respBody := bytes.NewBuffer(nil)
+	_, err = io.Copy(respBody, resp.Body)
 	if err != nil {
 		return fmt.Errorf("io.Copy: %w", err)
 	}
 
-	err = json.NewDecoder(rbody).Decode(target)
+	err = json.NewDecoder(respBody).Decode(target)
 	if err != nil {
 		return fmt.Errorf("json.Decoder.Decode: %w", err)
 	}
 
-	log("response body:"+NL+"%s", rbody.String())
+	log("response body:"+NL+"%s", respBody.String())
 	if respjson != nil {
-		*respjson = rbody.String()
+		*respjson = respBody.String()
+		log("respjson:"+NL+"%s", *respjson)
 	}
-	log("respjson:"+NL+"%s", rbody.String())
+
 	return nil
 }
 
