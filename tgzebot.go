@@ -374,20 +374,20 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 	}
 	defer resp.Body.Close()
 
-	respBody := bytes.NewBuffer(nil)
-	_, err = io.Copy(respBody, resp.Body)
+	var respBody []byte
+	respBody, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("io.Copy: %w", err)
+		return fmt.Errorf("io.ReadAll: %w", err)
 	}
 
-	err = json.NewDecoder(respBody).Decode(target)
+	err = json.NewDecoder(bytes.NewBuffer(respBody)).Decode(target)
 	if err != nil {
 		return fmt.Errorf("json.Decoder.Decode: %w", err)
 	}
 
-	log("getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody.String())
+	log("getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody)
 	if respjson != nil {
-		*respjson = respBody.String()
+		*respjson = string(respBody)
 		log("getJson %s respjson:"+NL+"%s", url, *respjson)
 	}
 
@@ -405,13 +405,13 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 	}
 	defer resp.Body.Close()
 
-	respBody := bytes.NewBuffer(nil)
-	_, err = io.Copy(respBody, resp.Body)
+	var respBody []byte
+	respBody, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("io.Copy: %w", err)
+		return fmt.Errorf("io.ReadAll: %w", err)
 	}
 
-	err = json.NewDecoder(respBody).Decode(target)
+	err = json.NewDecoder(bytes.NewBuffer(respBody)).Decode(target)
 	if err != nil {
 		return fmt.Errorf("Decode: %w", err)
 	}
