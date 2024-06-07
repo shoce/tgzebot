@@ -401,7 +401,6 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 	}
 	if respjson != nil {
 		*respjson = string(respBody)
-		log("getJson %s respjson:"+NL+"%s", url, *respjson)
 	}
 
 	return nil
@@ -971,10 +970,10 @@ func main() {
 			cmu := u.MyChatMemberUpdated
 			report := fmt.Sprintf(
 				"*MyChatMemberUpdated*"+NL+
-					"from: \\@%s id:%d"+NL+
-					"chat: id:%d type:%s title:%s"+NL+
-					"old member: \\@%s id:%d status:%s"+NL+
-					"new member: \\@%s id:%d status:%s"+NL+
+					"from: `@%s` id:`%d`"+NL+
+					"chat: id:`%d` type:`%s` title:`%s`"+NL+
+					"old member: `@%s` id:`%d` status:`%s`"+NL+
+					"new member: `@%s` id:`%d` status:`%s`"+NL+
 					"",
 				cmu.From.Username, cmu.From.Id,
 				cmu.Chat.Id, cmu.Chat.Type, cmu.Chat.Title,
