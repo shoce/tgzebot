@@ -956,7 +956,7 @@ func main() {
 			iseditmessage = true
 		} else {
 			log("Unsupported type of update received:"+NL+"%s", respjson)
-			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update received:"+NL+"```"+NL+"%s"+NL+"```", respjson), TgZeChatId, "", 0)
+			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update received:"+NL+"```"+NL+"%s"+NL+"```", respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 				continue
@@ -1906,16 +1906,6 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 func tgsendMessage(text string, chatid int64, parsemode string, replytomessageid int64) (msg *TgMessage, err error) {
 	// https://core.telegram.org/bots/api/#sendmessage
 	// https://core.telegram.org/bots/api/#formatting-options
-	if parsemode == "MarkdownV2" {
-		for _, c := range []string{`[`, `]`, `(`, `)`, `~`, "`", `>`, `#`, `+`, `-`, `=`, `|`, `{`, `}`, `.`, `!`} {
-			text = strings.ReplaceAll(text, c, `\`+c)
-		}
-		text = strings.ReplaceAll(text, "______", `\_\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "_____", `\_\_\_\_\_`)
-		text = strings.ReplaceAll(text, "____", `\_\_\_\_`)
-		text = strings.ReplaceAll(text, "___", `\_\_\_`)
-		text = strings.ReplaceAll(text, "__", `\_\_`)
-	}
 	sendMessage := map[string]interface{}{
 		"chat_id":                  chatid,
 		"text":                     text,
