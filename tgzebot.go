@@ -999,6 +999,7 @@ func main() {
 					"  id: `%d`"+NL+
 					"chat:"+NL+
 					"  id: `%d`"+NL+
+					"  username: @%s"+NL+
 					"  type: %s"+NL+
 					"  title: %s"+NL+
 					"old member:"+NL+
@@ -1011,7 +1012,7 @@ func main() {
 					"  status: %s"+NL+
 					"",
 				cmu.From.Username, cmu.From.Id,
-				cmu.Chat.Id, cmu.Chat.Type, tgescape(cmu.Chat.Title),
+				cmu.Chat.Id, cmu.Chat.Username, cmu.Chat.Type, tgescape(cmu.Chat.Title),
 				cmu.OldChatMember.User.Username, cmu.OldChatMember.User.Id, cmu.OldChatMember.Status,
 				cmu.NewChatMember.User.Username, cmu.NewChatMember.User.Id, cmu.NewChatMember.Status,
 			)
