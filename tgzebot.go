@@ -1068,7 +1068,7 @@ func main() {
 		var chatadmins string
 		if aa, err := tggetChatAdministrators(m.Chat.Id); err == nil {
 			for _, a := range aa {
-				chatadmins += fmt.Sprintf("@%s;id:%d;status:%s ", a.User.Username, a.User.Id, a.Status)
+				chatadmins += fmt.Sprintf("username:@%s id:%d status:%s  ", a.User.Username, a.User.Id, a.Status)
 				if a.User.Id == TgZeChatId {
 					shouldreport = false
 				}
@@ -1078,23 +1078,22 @@ func main() {
 		}
 		if shouldreport && m.MessageId != 0 {
 			report := fmt.Sprintf(
-				"%s"+NL+NL+
+				"*Message*"+NL+
+					"from: username:@%s id:`%d`"+NL+
+					"chat: username:@%s id:%d type:%s title:%s"+NL+
+					"chat admins: %s"+NL+
+					"iseditmessage:%v"+NL+
+					"text:"+NL+
+					"```"+NL+
 					"%s"+NL+
-					"from: @%s id:%d"+NL+
-					"chat: id:%d type:%s title:%s"+NL+
-					"chat admins: %s",
-				m.Text,
-				func(em bool) (s string) {
-					if em {
-						return "edited message"
-					}
-					return "new message"
-				}(iseditmessage),
+					"```",
 				m.From.Username, m.From.Id,
-				m.Chat.Id, m.Chat.Type, m.Chat.Title,
+				m.Chat.Id, m.Chat.Username, m.Chat.Type, tgescape(m.Chat.Title),
 				chatadmins,
+				iseditmessage,
+				m.Text,
 			)
-			_, err = tgsendMessage(report, TgZeChatId, "", 0)
+			_, err = tgsendMessage(report, TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 				continue
