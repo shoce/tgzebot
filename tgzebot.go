@@ -804,6 +804,30 @@ func init() {
 	}
 }
 
+func tgescape(text string) string {
+	// https://core.telegram.org/bots/api#markdownv2-style
+	return strings.NewReplacer(
+		"`", "\\`",
+		".", "\\.",
+		"-", "\\-",
+		"_", "\\_",
+		"#", "\\#",
+		"*", "\\*",
+		"~", "\\~",
+		">", "\\>",
+		"+", "\\+",
+		"=", "\\=",
+		"|", "\\|",
+		"!", "\\!",
+		"{", "\\{",
+		"}", "\\}",
+		"[", "\\[",
+		"]", "\\]",
+		"(", "\\(",
+		")", "\\)",
+	).Replace(text)
+}
+
 func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 	var offset int64
 	if len(TgUpdateLog) > 0 {
@@ -970,13 +994,24 @@ func main() {
 			cmu := u.MyChatMemberUpdated
 			report := fmt.Sprintf(
 				"*MyChatMemberUpdated*"+NL+
-					"from: `@%s` id:`%d`"+NL+
-					"chat: id:`%d` type:`%s` title:`%s`"+NL+
-					"old member: `@%s` id:`%d` status:`%s`"+NL+
-					"new member: `@%s` id:`%d` status:`%s`"+NL+
+					"from:"+NL+
+					"  username: @%s"+NL+
+					"  id: `%d`"+NL+
+					"chat:"+NL+
+					"  id: `%d`"+NL+
+					"  type: %s"+NL+
+					"  title: %s"+NL+
+					"old member:"+NL+
+					"  username: @%s"+NL+
+					"  id: `%d`"+NL+
+					"  status: %s"+NL+
+					"new member:"+NL+
+					"  username: @%s"+NL+
+					"  id: `%d`"+NL+
+					"  status: %s"+NL+
 					"",
 				cmu.From.Username, cmu.From.Id,
-				cmu.Chat.Id, cmu.Chat.Type, cmu.Chat.Title,
+				cmu.Chat.Id, cmu.Chat.Type, tgescape(cmu.Chat.Title),
 				cmu.OldChatMember.User.Username, cmu.OldChatMember.User.Id, cmu.OldChatMember.Status,
 				cmu.NewChatMember.User.Username, cmu.NewChatMember.User.Id, cmu.NewChatMember.Status,
 			)
