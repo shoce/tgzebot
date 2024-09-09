@@ -1,16 +1,17 @@
 
 # https://hub.docker.com/_/golang/tags
-FROM golang:1.22.4 as build
+FROM golang:1.23.1 as build
 WORKDIR /root/
 RUN apt update
 RUN apt -y -q install xz-utils
-RUN curl -s -S -L -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz
+RUN echo TARGETPLATFORM:$TARGETPLATFORM TARGETARCH:$TARGETARCH
+RUN curl -s -S -L -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$TARGETARCH-static.tar.xz
 RUN ls -l -a
-RUN tar -x -J -f ffmpeg-release-amd64-static.tar.xz
+RUN tar -x -J -f ffmpeg-release-$TARGETARCH-static.tar.xz
 RUN ls -l -a
 RUN mkdir -p /root/tgzebot/
 COPY tgzebot.go go.mod go.sum /root/tgzebot/
-RUN mv /root/ffmpeg-*-amd64-static/ffmpeg /root/tgzebot/ffmpeg
+RUN mv /root/ffmpeg-*-static/ffmpeg /root/tgzebot/ffmpeg
 RUN /root/tgzebot/ffmpeg -version
 WORKDIR /root/tgzebot/
 RUN go version
@@ -21,7 +22,7 @@ RUN ls -l -a
 
 
 # https://hub.docker.com/_/alpine/tags
-FROM alpine:3.20.0
+FROM alpine:3.20.3
 RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
 RUN mkdir -p /opt/tgzebot/
