@@ -1,10 +1,10 @@
 
 # https://hub.docker.com/_/golang/tags
 FROM golang:1.23.2 AS build
+ARG TARGETARCH
 WORKDIR /root/
 RUN apt update
 RUN apt -y -q install xz-utils
-RUN env
 RUN curl -s -S -L -O https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-$TARGETARCH-static.tar.xz
 RUN ls -l -a
 RUN tar -x -J -f ffmpeg-release-$TARGETARCH-static.tar.xz
