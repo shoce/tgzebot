@@ -1,0 +1,16 @@
+---
+
+YamlConfigPath: tgzebot.yaml
+
+KvToken: ''
+KvAccountId: ''
+KvNamespaceId: ''
+
+TgToken: ''
+TgZeChatId: ''
+
+CronSchedule: '*/2 * * * *'
+Interval: 1m
+ImageName: ghcr.io/shoce/tgzebot
+ImageTag: 241019.0803.0
+
