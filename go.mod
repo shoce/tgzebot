@@ -1,8 +1,6 @@
 module github.com/shoce/tgzebot
 
-go 1.21
-
-toolchain go1.21.1
+go 1.23
 
 require (
 	github.com/kkdai/youtube/v2 v2.10.2-0.20240422131028-23aa415a6747
@@ -11,9 +9,9 @@ require (
 
 require (
 	github.com/bitly/go-simplejson v0.5.1 // indirect
-	github.com/dlclark/regexp2 v1.11.2 // indirect
-	github.com/dop251/goja v0.0.0-20240707163329-b1681fb2a2f5 // indirect
+	github.com/dlclark/regexp2 v1.11.4 // indirect
+	github.com/dop251/goja v0.0.0-20241009100908-5f46f2705ca3 // indirect
 	github.com/go-sourcemap/sourcemap v2.1.4+incompatible // indirect
-	github.com/google/pprof v0.0.0-20240721033354-7089f98c1d14 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	github.com/google/pprof v0.0.0-20241017200806-017d972448fc // indirect
+	golang.org/x/text v0.19.0 // indirect
 )
