@@ -101,14 +101,10 @@ var (
 	TgQuest3Key string
 
 	TgAllChannelsChatIds []int64
-
-	TzBiel *time.Location
 )
 
 func init() {
 	var err error
-
-	TzBiel = time.FixedZone("Biel", 60*60)
 
 	if os.Getenv("YamlConfigPath") != "" {
 		YamlConfigPath = os.Getenv("YamlConfigPath")
@@ -529,23 +525,16 @@ func beats(td time.Duration) int {
 	return int(td / beat)
 }
 
-func tsversion() string {
-	t := time.Now().In(TzBiel)
-	v := fmt.Sprintf(
-		"%03d.%02d%02d.%d",
-		t.Year()%1000, t.Month(), t.Day(),
-		beats(time.Since(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, TzBiel))),
-	)
-	return v
-}
-
-func log(msg interface{}, args ...interface{}) {
+func ts() string {
 	t := time.Now().Local()
-	ts := fmt.Sprintf(
+	return fmt.Sprintf(
 		"%03d."+"%02d%02d."+"%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
-	msgtext := fmt.Sprintf("%s %s", ts, msg) + NL
+}
+
+func log(msg interface{}, args ...interface{}) {
+	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
 	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
@@ -1343,7 +1332,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		tgvideoCaption = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + tgvideoCaption
 	}
 
-	tgvideoFilename := fmt.Sprintf("%s.%s.mp4", tsversion(), v.Id)
+	tgvideoFilename := fmt.Sprintf("%s.%s.mp4", ts(), v.Id)
 	tgvideoFile, err := os.OpenFile(tgvideoFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("Create file: %w", err)
@@ -1386,7 +1375,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 
 	if targetVideoBitrateKbps > 0 {
 		log("Transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
-		tgvideoTranscodedFilename := fmt.Sprintf("%s.%s.%dk.mp4", tsversion(), v.Id, targetVideoBitrateKbps)
+		tgvideoTranscodedFilename := fmt.Sprintf("%s.%s.%dk.mp4", ts(), v.Id, targetVideoBitrateKbps)
 		ffmpegArgs := FfmpegGlobalOptions
 		ffmpegArgs = append(ffmpegArgs,
 			"-i", tgvideoFilename,
@@ -1536,7 +1525,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		tgaudioCaption = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + tgaudioCaption
 	}
 
-	tgaudioFilename := fmt.Sprintf("%s.%s.m4a", tsversion(), v.Id)
+	tgaudioFilename := fmt.Sprintf("%s.%s.m4a", ts(), v.Id)
 	tgaudioFile, err := os.OpenFile(tgaudioFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("Create file: %w", err)
@@ -1579,7 +1568,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 
 	if targetAudioBitrateKbps > 0 {
 		log("Transcoding to audio:%dkbps", targetAudioBitrateKbps)
-		tgaudioTranscodedFilename := fmt.Sprintf("%s.%s.%dk.m4a", tsversion(), v.Id, targetAudioBitrateKbps)
+		tgaudioTranscodedFilename := fmt.Sprintf("%s.%s.%dk.m4a", ts(), v.Id, targetAudioBitrateKbps)
 		ffmpegArgs := FfmpegGlobalOptions
 		ffmpegArgs = append(ffmpegArgs,
 			"-i", tgaudioFilename,
