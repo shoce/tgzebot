@@ -170,6 +170,7 @@ func init() {
 		log("ERROR time.ParseDuration Interval:`%s`: %v", IntervalString, err)
 		os.Exit(1)
 	}
+	log("Interval: %v", Interval)
 
 	TgToken = GetVar("TgToken")
 	if TgToken == "" {

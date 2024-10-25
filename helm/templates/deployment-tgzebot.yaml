@@ -1,0 +1,25 @@
+---
+apiVersion: batch/v1
+kind: Deployment
+metadata:
+  name: tgzebot
+  labels:
+    app: tgzebot
+spec:
+  selector:
+    matchLabels:
+      app: tgzebot
+  template:
+    metadata:
+      name: tgzebot
+      labels:
+        app: tgzebot
+    spec:
+      containers:
+        - name: tgzebot
+          imagePullPolicy: IfNotPresent
+          image: '{{ $.Values.ImageName }}:{{ $.Values.ImageTag }}'
+          envFrom:
+            - configMapRef:
+                name: tgzebot
+
