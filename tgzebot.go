@@ -48,6 +48,242 @@ const (
 	NL = "\n"
 )
 
+var (
+	DEBUG bool
+
+	Interval time.Duration
+
+	YamlConfigPath = "tgzebot.yaml"
+
+	KvToken       string
+	KvAccountId   string
+	KvNamespaceId string
+
+	Ctx context.Context
+
+	HttpClient = &http.Client{}
+
+	YtHttpClient = &http.Client{}
+	YtCl         ytdl.Client
+
+	ytRe, ytlistRe *regexp.Regexp
+
+	YtMaxResults int64 = 50
+	YtKey        string
+
+	YtHttpClientUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15"
+
+	// https://golang.org/s/re2syntax
+	// (?:re)	non-capturing group
+	// TODO add support for https://www.youtube.com/watch?&list=PL5Qevr-CpW_yZZjYspehnFc-QRKQMCKHB&v=1nzx7O7ndfI&index=34
+	YtReString     = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
+	YtListReString = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
+
+	TgToken     string
+	TgUpdateLog []int64
+	TgZeChatId  int64
+
+	TgMaxFileSizeBytes int64    = 48 << 20
+	TgAudioBitrateKbps int64    = 50
+	DownloadLanguages  []string = []string{"english", "german", "russian", "ukrainian"}
+
+	FfmpegPath          string = "./ffmpeg"
+	FfmpegGlobalOptions        = []string{"-v", "error"}
+
+	TgCommandChannels             string
+	TgCommandChannelsPromoteAdmin string
+
+	TgQuest1    string
+	TgQuest1Key string
+	TgQuest2    string
+	TgQuest2Key string
+	TgQuest3    string
+	TgQuest3Key string
+
+	TgAllChannelsChatIds []int64
+
+	TzBiel *time.Location
+)
+
+func init() {
+	var err error
+
+	TzBiel = time.FixedZone("Biel", 60*60)
+
+	if os.Getenv("YamlConfigPath") != "" {
+		YamlConfigPath = os.Getenv("YamlConfigPath")
+	}
+	if YamlConfigPath == "" {
+		log("WARNING YamlConfigPath empty")
+	}
+
+	KvToken = GetVar("KvToken")
+	if KvToken == "" {
+		log("WARNING KvToken empty")
+	}
+
+	KvAccountId = GetVar("KvAccountId")
+	if KvAccountId == "" {
+		log("WARNING KvAccountId empty")
+	}
+
+	KvNamespaceId = GetVar("KvNamespaceId")
+	if KvNamespaceId == "" {
+		log("WARNING KvNamespaceId empty")
+	}
+
+	Ctx = context.TODO()
+
+	YtProxy := http.ProxyFromEnvironment
+	if GetVar("YtProxyList") != "" {
+		pp := strings.Split(GetVar("YtProxyList"), " ")
+		rand.Seed(time.Now().UnixNano())
+		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
+			log("WARNING SetVar YtProxy: %v", err)
+		}
+	}
+	YtProxyUrl := GetVar("YtProxy")
+	if YtProxyUrl != "" {
+		if !strings.HasPrefix(YtProxyUrl, "https://") {
+			YtProxyUrl = "https://" + YtProxyUrl
+		}
+		log("YtProxy: %s", YtProxyUrl)
+		if YtProxyUrl, err := url.Parse(YtProxyUrl); err == nil {
+			YtProxy = http.ProxyURL(YtProxyUrl)
+		}
+	}
+
+	var proxyTransport http.RoundTripper = http.DefaultTransport
+	proxyTransport.(*http.Transport).Proxy = YtProxy
+	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
+
+	ytRe = regexp.MustCompile(YtReString)
+	ytlistRe = regexp.MustCompile(YtListReString)
+
+	IntervalString := GetVar("Interval")
+	if IntervalString == "" {
+		log("ERROR Interval empty")
+		os.Exit(1)
+	}
+	Interval, err = time.ParseDuration(IntervalString)
+	if err != nil {
+		log("ERROR time.ParseDuration Interval:`%s`: %v", IntervalString, err)
+		os.Exit(1)
+	}
+
+	TgToken = GetVar("TgToken")
+	if TgToken == "" {
+		log("ERROR TgToken empty")
+		os.Exit(1)
+	}
+
+	for _, s := range strings.Split(GetVar("TgUpdateLog"), " ") {
+		if s == "" {
+			continue
+		}
+		i, err := strconv.ParseInt(s, 10, 0)
+		if err != nil {
+			log("WARNING %v", err)
+			continue
+		}
+		TgUpdateLog = append(TgUpdateLog, i)
+	}
+
+	if GetVar("TgZeChatId") == "" {
+		log("ERROR TgZeChatId empty")
+		os.Exit(1)
+	} else {
+		TgZeChatId, err = strconv.ParseInt(GetVar("TgZeChatId"), 10, 0)
+		if err != nil {
+			log("ERROR invalid TgZeChatId: %v", err)
+			os.Exit(1)
+		}
+	}
+
+	TgCommandChannels = GetVar("TgCommandChannels")
+	if TgCommandChannels == "" {
+		log("ERROR TgCommandChannels empty")
+		os.Exit(1)
+	}
+
+	TgCommandChannelsPromoteAdmin = GetVar("TgCommandChannelsPromoteAdmin")
+	if TgCommandChannelsPromoteAdmin == "" {
+		log("ERROR TgCommandChannelsPromoteAdmin empty")
+		os.Exit(1)
+	}
+
+	TgQuest1 = GetVar("TgQuest1")
+	TgQuest1Key = GetVar("TgQuest1Key")
+
+	TgQuest2 = GetVar("TgQuest2")
+	TgQuest2Key = GetVar("TgQuest2Key")
+
+	TgQuest3 = GetVar("TgQuest3")
+	TgQuest3Key = GetVar("TgQuest3Key")
+
+	YtKey = GetVar("YtKey")
+	if YtKey == "" {
+		log("ERROR YtKey empty")
+		os.Exit(1)
+	}
+
+	if GetVar("YtMaxResults") != "" {
+		YtMaxResults, err = strconv.ParseInt(GetVar("YtMaxResults"), 10, 0)
+		if err != nil {
+			log("ERROR invalid YtMaxResults: %v", err)
+			os.Exit(1)
+		}
+	}
+
+	if GetVar("YtHttpClientUserAgent") != "" {
+		YtHttpClientUserAgent = GetVar("YtHttpClientUserAgent")
+	}
+	if GetVar("YtReString") != "" {
+		YtReString = GetVar("YtReString")
+	}
+	if GetVar("YtListReString") != "" {
+		YtListReString = GetVar("YtListReString")
+	}
+
+	if GetVar("FfmpegPath") != "" {
+		FfmpegPath = GetVar("FfmpegPath")
+	}
+	if GetVar("FfmpegGlobalOptions") != "" {
+		FfmpegGlobalOptions = strings.Split(GetVar("FfmpegGlobalOptions"), " ")
+	}
+
+	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
+		if i, err := strconv.ParseInt(s, 10, 0); err != nil {
+			log("WARNING invalid TgAllChannelsChatIds: %v", err)
+			continue
+		} else {
+			TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
+		}
+	}
+}
+
+func main() {
+	sigterm := make(chan os.Signal, 1)
+	signal.Notify(sigterm, syscall.SIGTERM)
+	go func(sigterm chan os.Signal) {
+		<-sigterm
+		tgsendMessage(fmt.Sprintf("%s: sigterm received", os.Args[0]), TgZeChatId, "", 0)
+		log("sigterm received")
+		os.Exit(1)
+	}(sigterm)
+
+	for {
+		t0 := time.Now()
+		processTgUpdates()
+		dur := time.Now().Sub(t0)
+		if dur < Interval {
+			time.Sleep(Interval - dur)
+		}
+	}
+
+	return
+}
+
 type TgChatMessageId struct {
 	ChatId    int64
 	MessageId int64
@@ -286,61 +522,6 @@ func (uat *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, err
 	req.Header.Set("User-Agent", uat.Agent)
 	return uat.T.RoundTrip(req)
 }
-
-var (
-	DEBUG bool
-
-	YamlConfigPath = "tgzebot.yaml"
-
-	KvToken       string
-	KvAccountId   string
-	KvNamespaceId string
-
-	Ctx context.Context
-
-	HttpClient = &http.Client{}
-
-	YtHttpClient = &http.Client{}
-	YtCl         ytdl.Client
-
-	ytRe, ytlistRe *regexp.Regexp
-
-	YtMaxResults int64 = 50
-	YtKey        string
-
-	YtHttpClientUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15"
-
-	// https://golang.org/s/re2syntax
-	// (?:re)	non-capturing group
-	// TODO add support for https://www.youtube.com/watch?&list=PL5Qevr-CpW_yZZjYspehnFc-QRKQMCKHB&v=1nzx7O7ndfI&index=34
-	YtReString     = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
-	YtListReString = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
-
-	TgToken     string
-	TgUpdateLog []int64
-	TgZeChatId  int64
-
-	TgMaxFileSizeBytes int64    = 48 << 20
-	TgAudioBitrateKbps int64    = 50
-	DownloadLanguages  []string = []string{"english", "german", "russian", "ukrainian"}
-
-	FfmpegPath          string = "./ffmpeg"
-	FfmpegGlobalOptions        = []string{"-v", "error"}
-
-	TgCommandChannels             string
-	TgCommandChannelsPromoteAdmin string
-
-	TgQuest1    string
-	TgQuest1Key string
-	TgQuest2    string
-	TgQuest2Key string
-	TgQuest3    string
-	TgQuest3Key string
-
-	TgAllChannelsChatIds []int64
-
-	TzBiel *time.Location
-)
 
 func beats(td time.Duration) int {
 	const beat = time.Duration(24) * time.Hour / 1000
@@ -647,152 +828,6 @@ func KvKeys() (kvkeys *KvKeysResponse, err error) {
 	return kvkeys, nil
 }
 
-func init() {
-	var err error
-
-	TzBiel = time.FixedZone("Biel", 60*60)
-
-	if os.Getenv("YamlConfigPath") != "" {
-		YamlConfigPath = os.Getenv("YamlConfigPath")
-	}
-	if YamlConfigPath == "" {
-		log("WARNING YamlConfigPath empty")
-	}
-
-	KvToken = GetVar("KvToken")
-	if KvToken == "" {
-		log("WARNING KvToken empty")
-	}
-
-	KvAccountId = GetVar("KvAccountId")
-	if KvAccountId == "" {
-		log("WARNING KvAccountId empty")
-	}
-
-	KvNamespaceId = GetVar("KvNamespaceId")
-	if KvNamespaceId == "" {
-		log("WARNING KvNamespaceId empty")
-	}
-
-	Ctx = context.TODO()
-
-	YtProxy := http.ProxyFromEnvironment
-	if GetVar("YtProxyList") != "" {
-		pp := strings.Split(GetVar("YtProxyList"), " ")
-		rand.Seed(time.Now().UnixNano())
-		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
-			log("WARNING SetVar YtProxy: %v", err)
-		}
-	}
-	YtProxyUrl := GetVar("YtProxy")
-	if YtProxyUrl != "" {
-		if !strings.HasPrefix(YtProxyUrl, "https://") {
-			YtProxyUrl = "https://" + YtProxyUrl
-		}
-		log("YtProxy: %s", YtProxyUrl)
-		if YtProxyUrl, err := url.Parse(YtProxyUrl); err == nil {
-			YtProxy = http.ProxyURL(YtProxyUrl)
-		}
-	}
-
-	var proxyTransport http.RoundTripper = http.DefaultTransport
-	proxyTransport.(*http.Transport).Proxy = YtProxy
-	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
-
-	ytRe = regexp.MustCompile(YtReString)
-	ytlistRe = regexp.MustCompile(YtListReString)
-
-	TgToken = GetVar("TgToken")
-	if TgToken == "" {
-		log("ERROR TgToken empty")
-		os.Exit(1)
-	}
-
-	for _, s := range strings.Split(GetVar("TgUpdateLog"), " ") {
-		if s == "" {
-			continue
-		}
-		i, err := strconv.ParseInt(s, 10, 0)
-		if err != nil {
-			log("WARNING %v", err)
-			continue
-		}
-		TgUpdateLog = append(TgUpdateLog, i)
-	}
-
-	if GetVar("TgZeChatId") == "" {
-		log("ERROR TgZeChatId empty")
-		os.Exit(1)
-	} else {
-		TgZeChatId, err = strconv.ParseInt(GetVar("TgZeChatId"), 10, 0)
-		if err != nil {
-			log("ERROR invalid TgZeChatId: %v", err)
-			os.Exit(1)
-		}
-	}
-
-	TgCommandChannels = GetVar("TgCommandChannels")
-	if TgCommandChannels == "" {
-		log("ERROR TgCommandChannels empty")
-		os.Exit(1)
-	}
-
-	TgCommandChannelsPromoteAdmin = GetVar("TgCommandChannelsPromoteAdmin")
-	if TgCommandChannelsPromoteAdmin == "" {
-		log("ERROR TgCommandChannelsPromoteAdmin empty")
-		os.Exit(1)
-	}
-
-	TgQuest1 = GetVar("TgQuest1")
-	TgQuest1Key = GetVar("TgQuest1Key")
-
-	TgQuest2 = GetVar("TgQuest2")
-	TgQuest2Key = GetVar("TgQuest2Key")
-
-	TgQuest3 = GetVar("TgQuest3")
-	TgQuest3Key = GetVar("TgQuest3Key")
-
-	YtKey = GetVar("YtKey")
-	if YtKey == "" {
-		log("ERROR YtKey empty")
-		os.Exit(1)
-	}
-
-	if GetVar("YtMaxResults") != "" {
-		YtMaxResults, err = strconv.ParseInt(GetVar("YtMaxResults"), 10, 0)
-		if err != nil {
-			log("ERROR invalid YtMaxResults: %v", err)
-			os.Exit(1)
-		}
-	}
-
-	if GetVar("YtHttpClientUserAgent") != "" {
-		YtHttpClientUserAgent = GetVar("YtHttpClientUserAgent")
-	}
-	if GetVar("YtReString") != "" {
-		YtReString = GetVar("YtReString")
-	}
-	if GetVar("YtListReString") != "" {
-		YtListReString = GetVar("YtListReString")
-	}
-
-	if GetVar("FfmpegPath") != "" {
-		FfmpegPath = GetVar("FfmpegPath")
-	}
-	if GetVar("FfmpegGlobalOptions") != "" {
-		FfmpegGlobalOptions = strings.Split(GetVar("FfmpegGlobalOptions"), " ")
-	}
-
-	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
-		if i, err := strconv.ParseInt(s, 10, 0); err != nil {
-			log("WARNING invalid TgAllChannelsChatIds: %v", err)
-			continue
-		} else {
-			TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
-		}
-	}
-}
-
 func tgescape(text string) string {
 	// https://core.telegram.org/bots/api#markdownv2-style
 	return strings.NewReplacer(
@@ -912,17 +947,8 @@ func tggetChatAdministrators(chatid int64) (mm []TgChatMember, err error) {
 	return tgResp.Result, nil
 }
 
-func main() {
+func processTgUpdates() {
 	var err error
-
-	sigterm := make(chan os.Signal, 1)
-	signal.Notify(sigterm, syscall.SIGTERM)
-	go func(sigterm chan os.Signal) {
-		<-sigterm
-		tgsendMessage(fmt.Sprintf("%s: sigterm received", os.Args[0]), TgZeChatId, "", 0)
-		log("sigterm received")
-		os.Exit(1)
-	}(sigterm)
 
 	var tgdeleteMessages []TgChatMessageId
 	defer func(mm *[]TgChatMessageId) {
