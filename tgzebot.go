@@ -347,16 +347,6 @@ func beats(td time.Duration) int {
 	return int(td / beat)
 }
 
-func ts() string {
-	t := time.Now().In(TzBiel)
-	ts := fmt.Sprintf(
-		"%03dy"+"%02dm"+"%02dd"+"%db",
-		t.Year()%1000, t.Month(), t.Day(),
-		beats(time.Since(time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, TzBiel))),
-	)
-	return ts
-}
-
 func tsversion() string {
 	t := time.Now().In(TzBiel)
 	v := fmt.Sprintf(
@@ -370,7 +360,7 @@ func tsversion() string {
 func log(msg interface{}, args ...interface{}) {
 	t := time.Now().Local()
 	ts := fmt.Sprintf(
-		"Y%03d"+"D%02d%02d"+"T%02d%02d",
+		"%03d."+"%02d%02d."+"%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 	msgtext := fmt.Sprintf("%s %s", ts, msg) + NL
