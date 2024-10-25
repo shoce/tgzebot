@@ -1944,7 +1944,7 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 	)
 	if err != nil {
 		if regexp.MustCompile("Too Many Requests: retry after [0-9]+$").MatchString(fmt.Sprintf("%s", err)) {
-			log("telegram api too many requests: sleeping 33 seconds")
+			log("WARNING telegram api too many requests: sleeping 33 seconds")
 			time.Sleep(33 * time.Second)
 		}
 		return nil, err
