@@ -959,13 +959,13 @@ func processTgUpdates() {
 	for _, u := range uu {
 
 		if len(TgUpdateLog) > 0 && TgUpdateLog[len(TgUpdateLog)-1] > u.UpdateId {
-			log("This Update was processed already, skipping")
+			log("WARNING this telegram Update was processed already, skipping")
 			continue
 		}
 
 		if len(TgUpdateLog) > 1 && TgUpdateLog[len(TgUpdateLog)-1] == u.UpdateId && TgUpdateLog[len(TgUpdateLog)-2] == u.UpdateId {
 			//log("TgUpdateLog: %v", TgUpdateLog)
-			log("This Update was tried twice already, skipping")
+			log("WARNING this telegram Update was tried twice already, skipping")
 			continue
 		}
 
@@ -1026,10 +1026,10 @@ func processTgUpdates() {
 				log("tgsendMessage: %v", err)
 			}
 		} else {
-			log("Unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
+			log("WARNING unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
 			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
-				log("tgsendMessage: %v", err)
+				log("WARNING tgsendMessage: %v", err)
 				continue
 			}
 			continue
@@ -1064,7 +1064,7 @@ func processTgUpdates() {
 			}
 		}
 
-		log("Message text: `%s`", m.Text)
+		log("telegram message text: `%s`", m.Text)
 
 		shouldreport := true
 		if m.From.Id == TgZeChatId {
@@ -1216,7 +1216,7 @@ func processTgUpdates() {
 			for _, v := range videos {
 				vinfo, err = YtCl.GetVideoContext(Ctx, v.Id)
 				if err != nil {
-					log("GetVideoContext: %v", err)
+					log("WARNING GetVideoContext: %v", err)
 					postingerr = err
 					break
 				}
@@ -1318,7 +1318,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	defer ytstream.Close()
 
 	log(
-		"Downloading youtube video size:%dMB quality:%s bitrate:%dkbps duration:%s language:%#v",
+		"downloading youtube video size:%dMB quality:%s bitrate:%dkbps duration:%s language:%#v",
 		ytstreamsize>>20,
 		videoFormat.QualityLabel,
 		videoFormat.Bitrate>>10,
@@ -1361,7 +1361,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("Downloaded video in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded video in %v", time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
 		if targetVideoBitrateKbps > 0 {
@@ -1374,7 +1374,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	if targetVideoBitrateKbps > 0 {
-		log("Transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
+		log("transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
 		tgvideoTranscodedFilename := fmt.Sprintf("%s.%s.%dk.mp4", ts(), v.Id, targetVideoBitrateKbps)
 		ffmpegArgs := FfmpegGlobalOptions
 		ffmpegArgs = append(ffmpegArgs,
@@ -1399,11 +1399,11 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			return fmt.Errorf("Ffmpeg Start: %w", err)
 		}
 
-		log("Started command `%s`", ffmpegCmd.String())
+		log("started command `%s`", ffmpegCmd.String())
 
 		_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
 		if err != nil {
-			log("Copy from ffmpeg stderr: %w", err)
+			log("copy from ffmpeg stderr: %w", err)
 		}
 
 		err = ffmpegCmd.Wait()
@@ -1411,10 +1411,10 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			return fmt.Errorf("Ffmpeg Wait: %w", err)
 		}
 
-		log("Transcoded video in %v", time.Since(t0).Truncate(time.Second))
+		log("transcoded video in %v", time.Since(t0).Truncate(time.Second))
 
 		if err := os.Remove(tgvideoFilename); err != nil {
-			log("Remove: %v", err)
+			log("os.Remove: %v", err)
 		}
 
 		tgvideoCaption += NL + fmt.Sprintf("(transcoded to audio:%dkbps video:%dkbps)", TgAudioBitrateKbps, targetVideoBitrateKbps)
@@ -1443,7 +1443,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		log("os.File.Close: %v", err)
 	}
 	if err := os.Remove(tgvideoFilename); err != nil {
-		log("Remove: %v", err)
+		log("os.Remove: %v", err)
 	}
 
 	if tgvideo.FileId == "" {
@@ -1512,7 +1512,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log(
-		"Downloading youtube audio size:%dMB bitrate:%dkbps duration:%s language:%#v",
+		"downloading youtube audio size:%dMB bitrate:%dkbps duration:%s language:%#v",
 		ytstreamsize>>20,
 		audioFormat.Bitrate>>10,
 		vinfo.Duration,
@@ -1554,7 +1554,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("Downloaded audio in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded audio in %v", time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
 		if targetAudioBitrateKbps > 0 {
@@ -1567,7 +1567,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	if targetAudioBitrateKbps > 0 {
-		log("Transcoding to audio:%dkbps", targetAudioBitrateKbps)
+		log("transcoding to audio:%dkbps", targetAudioBitrateKbps)
 		tgaudioTranscodedFilename := fmt.Sprintf("%s.%s.%dk.m4a", ts(), v.Id, targetAudioBitrateKbps)
 		ffmpegArgs := FfmpegGlobalOptions
 		ffmpegArgs = append(ffmpegArgs,
@@ -1590,11 +1590,11 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			return fmt.Errorf("Ffmpeg Start: %w", err)
 		}
 
-		log("Started command `%s`", ffmpegCmd.String())
+		log("started command `%s`", ffmpegCmd.String())
 
 		_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
 		if err != nil {
-			log("Copy from ffmpeg stderr: %v", err)
+			log("ERROR copy from ffmpeg stderr: %v", err)
 		}
 
 		err = ffmpegCmd.Wait()
@@ -1602,10 +1602,10 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			return fmt.Errorf("Ffmpeg Wait: %w", err)
 		}
 
-		log("Transcoded audio in %v", time.Since(t0).Truncate(time.Second))
+		log("transcoded audio in %v", time.Since(t0).Truncate(time.Second))
 
 		if err := os.Remove(tgaudioFilename); err != nil {
-			log("Remove: %v", err)
+			log("os.Remove: %v", err)
 		}
 
 		tgaudioCaption += NL + fmt.Sprintf("(transcoded to %dkbps)", targetAudioBitrateKbps)
@@ -1634,7 +1634,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		log("os.File.Close: %v", err)
 	}
 	if err := os.Remove(tgaudioFilename); err != nil {
-		log("Remove: %v", err)
+		log("os.Remove: %v", err)
 	}
 
 	if tgaudio == nil {
@@ -1663,8 +1663,8 @@ func getList(ytlistid string) (ytitems []YtVideo, err error) {
 		return nil, fmt.Errorf("more than one (%d) playlists found with provided id %s", len(playlists.Items), ytlistid)
 	}
 
-	log("Playlist Title: %s", playlists.Items[0].Snippet.Title)
-	log("Playlist Item Count: %d", playlists.Items[0].ContentDetails.ItemCount)
+	log("playlist title: %s", playlists.Items[0].Snippet.Title)
+	log("playlist item count: %d", playlists.Items[0].ContentDetails.ItemCount)
 
 	listtitle := playlists.Items[0].Snippet.Title
 
@@ -1731,7 +1731,11 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 
 	var mparterr error
 	go func(err error) {
-		defer log("mparterr: %v", err)
+		defer func() {
+			if mparterr != nil {
+				log("mparterr: %v", err)
+			}
+		}()
 
 		var formw io.Writer
 
@@ -1844,6 +1848,8 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 		return nil, fmt.Errorf("sendVideo: Video.FileId empty")
 	}
 
+	log("sent the video to telegram")
+
 	return tgvideo, nil
 }
 
@@ -1853,7 +1859,11 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 
 	var mparterr error
 	go func(err error) {
-		defer log("mparterr: %v", err)
+		defer func() {
+			if mparterr != nil {
+				log("mparterr: %v", err)
+			}
+		}()
 
 		var formw io.Writer
 
@@ -1969,6 +1979,8 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 	if tgaudio.FileId == "" {
 		return nil, fmt.Errorf("sendAudio: Audio.FileId empty")
 	}
+
+	log("sent the audio to telegram")
 
 	return tgaudio, nil
 }
