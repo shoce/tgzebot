@@ -370,7 +370,7 @@ func tsversion() string {
 func log(msg interface{}, args ...interface{}) {
 	t := time.Now().Local()
 	ts := fmt.Sprintf(
-		"%03d."+"%02d%02d."+"%02d"+"%02d.",
+		"Y%03d"+"D%02d%02d"+"T%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 	msgtext := fmt.Sprintf("%s %s", ts, msg) + NL
@@ -396,7 +396,7 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 	}
 
 	if DEBUG {
-		log("getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody)
+		log("DEBUG getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody)
 	}
 	if respjson != nil {
 		*respjson = string(respBody)
@@ -491,7 +491,7 @@ func SetVar(name, value string) (err error) {
 func YamlGet(name string) (value string, err error) {
 	configf, err := os.Open(YamlConfigPath)
 	if err != nil {
-		//log("WARNING: os.Open config file %s: %v", YamlConfigPath, err)
+		//log("WARNING os.Open config file %s: %v", YamlConfigPath, err)
 		if os.IsNotExist(err) {
 			return "", nil
 		}
@@ -501,7 +501,7 @@ func YamlGet(name string) (value string, err error) {
 
 	configm := make(map[interface{}]interface{})
 	if err = yaml.NewDecoder(configf).Decode(&configm); err != nil {
-		//log("WARNING: yaml.Decode %s: %v", YamlConfigPath, err)
+		//log("WARNING yaml.Decode %s: %v", YamlConfigPath, err)
 		return "", err
 	}
 
@@ -525,7 +525,7 @@ func YamlSet(name, value string) error {
 		configm := make(map[interface{}]interface{})
 		err := yaml.NewDecoder(configf).Decode(&configm)
 		if err != nil {
-			log("WARNING: yaml.Decode %s: %v", YamlConfigPath, err)
+			log("WARNING yaml.Decode %s: %v", YamlConfigPath, err)
 		}
 		configf.Close()
 		configm[name] = value
@@ -538,15 +538,15 @@ func YamlSet(name, value string) error {
 				confige.Close()
 				configf.Close()
 			} else {
-				log("WARNING: yaml.Encoder.Encode: %v", err)
+				log("WARNING yaml.Encoder.Encode: %v", err)
 				return err
 			}
 		} else {
-			log("WARNING: os.Create config file %s: %v", YamlConfigPath, err)
+			log("WARNING os.Create config file %s: %v", YamlConfigPath, err)
 			return err
 		}
 	} else {
-		log("WARNING: os.Open config file %s: %v", YamlConfigPath, err)
+		log("WARNING os.Open config file %s: %v", YamlConfigPath, err)
 		return err
 	}
 
@@ -666,22 +666,22 @@ func init() {
 		YamlConfigPath = os.Getenv("YamlConfigPath")
 	}
 	if YamlConfigPath == "" {
-		log("WARNING: YamlConfigPath empty")
+		log("WARNING YamlConfigPath empty")
 	}
 
 	KvToken = GetVar("KvToken")
 	if KvToken == "" {
-		log("WARNING: KvToken empty")
+		log("WARNING KvToken empty")
 	}
 
 	KvAccountId = GetVar("KvAccountId")
 	if KvAccountId == "" {
-		log("WARNING: KvAccountId empty")
+		log("WARNING KvAccountId empty")
 	}
 
 	KvNamespaceId = GetVar("KvNamespaceId")
 	if KvNamespaceId == "" {
-		log("WARNING: KvNamespaceId empty")
+		log("WARNING KvNamespaceId empty")
 	}
 
 	Ctx = context.TODO()
@@ -691,7 +691,7 @@ func init() {
 		pp := strings.Split(GetVar("YtProxyList"), " ")
 		rand.Seed(time.Now().UnixNano())
 		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
-			log("WARNING: SetVar YtProxy: %v", err)
+			log("WARNING SetVar YtProxy: %v", err)
 		}
 	}
 	YtProxyUrl := GetVar("YtProxy")
@@ -714,7 +714,7 @@ func init() {
 
 	TgToken = GetVar("TgToken")
 	if TgToken == "" {
-		log("ERROR: TgToken empty")
+		log("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
@@ -724,32 +724,32 @@ func init() {
 		}
 		i, err := strconv.ParseInt(s, 10, 0)
 		if err != nil {
-			log("WARNING: %v", err)
+			log("WARNING %v", err)
 			continue
 		}
 		TgUpdateLog = append(TgUpdateLog, i)
 	}
 
 	if GetVar("TgZeChatId") == "" {
-		log("ERROR: TgZeChatId empty")
+		log("ERROR TgZeChatId empty")
 		os.Exit(1)
 	} else {
 		TgZeChatId, err = strconv.ParseInt(GetVar("TgZeChatId"), 10, 0)
 		if err != nil {
-			log("ERROR: invalid TgZeChatId: %v", err)
+			log("ERROR invalid TgZeChatId: %v", err)
 			os.Exit(1)
 		}
 	}
 
 	TgCommandChannels = GetVar("TgCommandChannels")
 	if TgCommandChannels == "" {
-		log("ERROR: TgCommandChannels empty")
+		log("ERROR TgCommandChannels empty")
 		os.Exit(1)
 	}
 
 	TgCommandChannelsPromoteAdmin = GetVar("TgCommandChannelsPromoteAdmin")
 	if TgCommandChannelsPromoteAdmin == "" {
-		log("ERROR: TgCommandChannelsPromoteAdmin empty")
+		log("ERROR TgCommandChannelsPromoteAdmin empty")
 		os.Exit(1)
 	}
 
@@ -764,14 +764,14 @@ func init() {
 
 	YtKey = GetVar("YtKey")
 	if YtKey == "" {
-		log("ERROR: YtKey empty")
+		log("ERROR YtKey empty")
 		os.Exit(1)
 	}
 
 	if GetVar("YtMaxResults") != "" {
 		YtMaxResults, err = strconv.ParseInt(GetVar("YtMaxResults"), 10, 0)
 		if err != nil {
-			log("ERROR: invalid YtMaxResults: %v", err)
+			log("ERROR invalid YtMaxResults: %v", err)
 			os.Exit(1)
 		}
 	}
@@ -795,7 +795,7 @@ func init() {
 
 	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
 		if i, err := strconv.ParseInt(s, 10, 0); err != nil {
-			log("WARNING: invalid TgAllChannelsChatIds: %v", err)
+			log("WARNING invalid TgAllChannelsChatIds: %v", err)
 			continue
 		} else {
 			TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
@@ -972,7 +972,7 @@ func main() {
 			ltss = append(ltss, fmt.Sprintf("%d", i))
 		}
 		if err := SetVar("TgUpdateLog", strings.Join(ltss, " ")); err != nil {
-			log("WARNING: SetVar TgUpdateLog: %v", err)
+			log("WARNING SetVar TgUpdateLog: %v", err)
 		}
 
 		var iseditmessage bool
@@ -1053,7 +1053,7 @@ func main() {
 
 			if GetVar("TgAllChannelsChatIds") != s {
 				if err := SetVar("TgAllChannelsChatIds", s); err != nil {
-					log("WARNING: SetVar TgAllChannelsChatIds: %v", err)
+					log("WARNING SetVar TgAllChannelsChatIds: %v", err)
 				}
 			}
 		}
