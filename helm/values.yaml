@@ -2,15 +2,15 @@
 
 YamlConfigPath: tgzebot.yaml
 
-KvToken: ''
-KvAccountId: ''
-KvNamespaceId: ''
+KvToken: ""
+KvAccountId: ""
+KvNamespaceId: ""
 
-TgToken: ''
-TgZeChatId: ''
+TgToken: ""
+TgZeChatId: ""
 
 Interval: 1m
 
 ImageName: ghcr.io/shoce/tgzebot
-ImageTag: ''
+ImageTag: ""
 

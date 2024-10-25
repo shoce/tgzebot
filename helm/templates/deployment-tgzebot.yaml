@@ -18,7 +18,7 @@ spec:
       containers:
         - name: tgzebot
           imagePullPolicy: IfNotPresent
-          image: '{{ $.Values.ImageName }}:{{ $.Values.ImageTag }}'
+          image: "{{ $.Values.ImageName }}:{{ $.Values.ImageTag }}"
           envFrom:
             - configMapRef:
                 name: tgzebot
