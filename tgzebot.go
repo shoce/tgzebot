@@ -46,6 +46,8 @@ import (
 
 const (
 	NL = "\n"
+
+	BEAT = time.Duration(24) * time.Hour / 1000
 )
 
 var (
@@ -106,6 +108,9 @@ var (
 func init() {
 	var err error
 
+	ytRe = regexp.MustCompile(YtReString)
+	ytlistRe = regexp.MustCompile(YtListReString)
+
 	if os.Getenv("YamlConfigPath") != "" {
 		YamlConfigPath = os.Getenv("YamlConfigPath")
 	}
@@ -152,9 +157,6 @@ func init() {
 	var proxyTransport http.RoundTripper = http.DefaultTransport
 	proxyTransport.(*http.Transport).Proxy = YtProxy
 	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
-
-	ytRe = regexp.MustCompile(YtReString)
-	ytlistRe = regexp.MustCompile(YtListReString)
 
 	IntervalString := GetVar("Interval")
 	if IntervalString == "" {
@@ -279,6 +281,23 @@ func main() {
 	}
 
 	return
+}
+
+func beats(td time.Duration) int {
+	return int(td / BEAT)
+}
+
+func ts() string {
+	t := time.Now().Local()
+	return fmt.Sprintf(
+		"%03d."+"%02d%02d."+"%02d%02d",
+		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
+	)
+}
+
+func log(msg interface{}, args ...interface{}) {
+	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
+	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
 type TgChatMessageId struct {
@@ -518,24 +537,6 @@ type UserAgentTransport struct {
 func (uat *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req.Header.Set("User-Agent", uat.Agent)
 	return uat.T.RoundTrip(req)
-}
-
-func beats(td time.Duration) int {
-	const beat = time.Duration(24) * time.Hour / 1000
-	return int(td / beat)
-}
-
-func ts() string {
-	t := time.Now().Local()
-	return fmt.Sprintf(
-		"%03d."+"%02d%02d."+"%02d%02d",
-		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
-	)
-}
-
-func log(msg interface{}, args ...interface{}) {
-	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
-	fmt.Fprintf(os.Stderr, msgtext, args...)
 }
 
 func getJson(url string, target interface{}, respjson *string) (err error) {
