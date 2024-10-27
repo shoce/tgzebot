@@ -1065,7 +1065,10 @@ func processTgUpdates() {
 			}
 		}
 
-		log("telegram message text: `%s`", m.Text)
+		log("telegram message from:%s chat:%s text: `%s`", m.From.Username, m.Chat.Username, m.Text)
+		if m.Text == "" {
+			continue
+		}
 
 		shouldreport := true
 		if m.From.Id == TgZeChatId {

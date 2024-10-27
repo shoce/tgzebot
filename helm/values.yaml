@@ -9,8 +9,6 @@ KvNamespaceId: ""
 TgToken: ""
 TgZeChatId: ""
 
-Interval: 1m
-
 ImageName: ghcr.io/shoce/tgzebot
 ImageTag: ""
 
