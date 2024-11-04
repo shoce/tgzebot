@@ -268,6 +268,8 @@ func init() {
 	if v := GetVar("FfmpegPath"); v != "" {
 		FfmpegPath = v
 	}
+	log("FfmpegPath:`%s`", FfmpegPath)
+
 	if v := GetVar("FfmpegGlobalOptions"); v != "" {
 		FfmpegGlobalOptions = strings.Split(v, " ")
 	}
@@ -1779,6 +1781,8 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 		}
 	}(mparterr)
 
+	t0 := time.Now()
+
 	resp, err := HttpClient.Post(
 		fmt.Sprintf("%s/bot%s/sendVideo", TelegramApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
@@ -1808,7 +1812,7 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 		return nil, fmt.Errorf("sendVideo: Video.FileId empty")
 	}
 
-	log("sent the video to telegram")
+	log("sent the video to telegram in %v", time.Since(t0).Truncate(time.Second))
 
 	return tgvideo, nil
 }
@@ -1907,6 +1911,8 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 		}
 	}(mparterr)
 
+	t0 := time.Now()
+
 	resp, err := HttpClient.Post(
 		fmt.Sprintf("%s/bot%s/sendAudio", TelegramApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
@@ -1940,7 +1946,7 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 		return nil, fmt.Errorf("sendAudio: Audio.FileId empty")
 	}
 
-	log("sent the audio to telegram")
+	log("sent the audio to telegram in %v", time.Since(t0).Truncate(time.Second))
 
 	return tgaudio, nil
 }
