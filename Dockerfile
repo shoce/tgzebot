@@ -31,6 +31,7 @@ RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
 RUN mkdir -p /opt/tgzebot/
 
+COPY --from=ghcr.io/shoce/tgbotserver /bin/tgbotserver /bin/tgbotserver
 COPY --from=build /root/tgzebot/ffmpeg /bin/ffmpeg
 COPY --from=build /root/tgzebot/tgzebot /bin/tgzebot
 RUN ls -l -a /bin/ffmpeg /bin/tgzebot
