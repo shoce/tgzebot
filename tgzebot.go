@@ -1668,7 +1668,6 @@ func getList(ytlistid string) (ytitems []YtVideo, err error) {
 	}
 
 	log("playlist title: %s", playlists.Items[0].Snippet.Title)
-	log("playlist item count: %d", playlists.Items[0].ContentDetails.ItemCount)
 
 	listtitle := playlists.Items[0].Snippet.Title
 
