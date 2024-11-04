@@ -4,4 +4,6 @@ kind: ConfigMap
 metadata:
   name: tgbotserver
 data:
+  TELEGRAM_API_ID: "{{ $.Values.TgBotServerApiId }}"
+  TELEGRAM_API_HASH: "{{ $.Values.TgBotServerApiHash }}"
 

@@ -1,5 +1,9 @@
 ---
 
+
+ImageNameTgZeBot: ghcr.io/shoce/tgzebot
+ImageTagTgZeBot: ""
+
 YamlConfigPath: tgzebot.yaml
 
 KvToken: ""
@@ -9,9 +13,11 @@ KvNamespaceId: ""
 TgToken: ""
 TgZeChatId: ""
 
-ImageNameTgZeBot: ghcr.io/shoce/tgzebot
-ImageTagTgZeBot: ""
 
 ImageNameTgBotServer: ghcr.io/shoce/tgbotserver
 ImageTagTgBotServer: ""
+
+TgBotServerApiId: ""
+TgBotServerApiHash: ""
+
 
