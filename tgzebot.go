@@ -82,12 +82,13 @@ var (
 	TgUpdateLog []int64
 	TgZeChatId  int64
 
-	TgMaxFileSizeBytes int64    = 48 << 20
-	TgAudioBitrateKbps int64    = 50
-	DownloadLanguages  []string = []string{"english", "german", "russian", "ukrainian"}
+	TgMaxFileSizeBytes int64 = 47 << 20
+	TgAudioBitrateKbps int64 = 60
 
-	FfmpegPath          string = "./ffmpeg"
-	FfmpegGlobalOptions        = []string{"-v", "error"}
+	DownloadLanguages []string
+
+	FfmpegPath          string
+	FfmpegGlobalOptions []string
 
 	TgCommandChannels             string
 	TgCommandChannelsPromoteAdmin string
@@ -269,6 +270,10 @@ func init() {
 	}
 	if v := GetVar("FfmpegGlobalOptions"); v != "" {
 		FfmpegGlobalOptions = strings.Split(v, " ")
+	}
+
+	if v := GetVar("DownloadLanguages"); v != "" {
+		DownloadLanguages = strings.Split(v, " ")
 	}
 
 	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
