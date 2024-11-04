@@ -3,11 +3,6 @@
 https://pkg.go.dev/github.com/kkdai/youtube/v2/
 https://core.telegram.org/bots/api/
 
-https://johnvansickle.com/ffmpeg/
-
-curl -s -S -L https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz | tar -x -J
-mv ./ffmpeg-*-amd64-static/ffmpeg ./ffmpeg
-
 go get -a -u -v
 go get github.com/kkdai/youtube/v2@master
 go mod tidy
@@ -113,8 +108,8 @@ func init() {
 	ytRe = regexp.MustCompile(YtReString)
 	ytlistRe = regexp.MustCompile(YtListReString)
 
-	if os.Getenv("YamlConfigPath") != "" {
-		YamlConfigPath = os.Getenv("YamlConfigPath")
+	if v := os.Getenv("YamlConfigPath"); v != "" {
+		YamlConfigPath = v
 	}
 	if YamlConfigPath == "" {
 		log("WARNING YamlConfigPath empty")
@@ -161,8 +156,8 @@ func init() {
 	Ctx = context.TODO()
 
 	YtProxy := http.ProxyFromEnvironment
-	if GetVar("YtProxyList") != "" {
-		pp := strings.Split(GetVar("YtProxyList"), " ")
+	if v := GetVar("YtProxyList"); v != "" {
+		pp := strings.Split(v, " ")
 		rand.Seed(time.Now().UnixNano())
 		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
 			log("WARNING SetVar YtProxy: %v", err)
@@ -213,11 +208,11 @@ func init() {
 		TgUpdateLog = append(TgUpdateLog, i)
 	}
 
-	if GetVar("TgZeChatId") == "" {
+	if v := GetVar("TgZeChatId"); v == "" {
 		log("ERROR TgZeChatId empty")
 		os.Exit(1)
 	} else {
-		TgZeChatId, err = strconv.ParseInt(GetVar("TgZeChatId"), 10, 0)
+		TgZeChatId, err = strconv.ParseInt(v, 10, 0)
 		if err != nil {
 			log("ERROR invalid TgZeChatId: %v", err)
 			os.Exit(1)
@@ -251,29 +246,29 @@ func init() {
 		os.Exit(1)
 	}
 
-	if GetVar("YtMaxResults") != "" {
-		YtMaxResults, err = strconv.ParseInt(GetVar("YtMaxResults"), 10, 0)
+	if v := GetVar("YtMaxResults"); v != "" {
+		YtMaxResults, err = strconv.ParseInt(v, 10, 0)
 		if err != nil {
 			log("ERROR invalid YtMaxResults: %v", err)
 			os.Exit(1)
 		}
 	}
 
-	if GetVar("YtHttpClientUserAgent") != "" {
-		YtHttpClientUserAgent = GetVar("YtHttpClientUserAgent")
+	if v := GetVar("YtHttpClientUserAgent"); v != "" {
+		YtHttpClientUserAgent = v
 	}
-	if GetVar("YtReString") != "" {
-		YtReString = GetVar("YtReString")
+	if v := GetVar("YtReString"); v != "" {
+		YtReString = v
 	}
-	if GetVar("YtListReString") != "" {
-		YtListReString = GetVar("YtListReString")
+	if v := GetVar("YtListReString"); v != "" {
+		YtListReString = v
 	}
 
-	if GetVar("FfmpegPath") != "" {
-		FfmpegPath = GetVar("FfmpegPath")
+	if v := GetVar("FfmpegPath"); v != "" {
+		FfmpegPath = v
 	}
-	if GetVar("FfmpegGlobalOptions") != "" {
-		FfmpegGlobalOptions = strings.Split(GetVar("FfmpegGlobalOptions"), " ")
+	if v := GetVar("FfmpegGlobalOptions"); v != "" {
+		FfmpegGlobalOptions = strings.Split(v, " ")
 	}
 
 	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
@@ -1402,52 +1397,17 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}
 
-	if targetVideoBitrateKbps > 0 {
-		log("transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
-		tgvideoTranscodedFilename := fmt.Sprintf("%s.%s.%dk.mp4", ts(), v.Id, targetVideoBitrateKbps)
-		ffmpegArgs := FfmpegGlobalOptions
-		ffmpegArgs = append(ffmpegArgs,
-			"-i", tgvideoFilename,
-			"-f", "mp4",
-			"-c:a", "aac",
-			"-b:a", fmt.Sprintf("%dk", TgAudioBitrateKbps),
-			"-c:v", "h264",
-			"-b:v", fmt.Sprintf("%dk", targetVideoBitrateKbps),
-			tgvideoTranscodedFilename,
-		)
-		ffmpegCmd := exec.Command(FfmpegPath, ffmpegArgs...)
-
-		ffmpegCmdStderrPipe, err := ffmpegCmd.StderrPipe()
+	if FfmpegPath != "" && targetVideoBitrateKbps > 0 {
+		filename2 := fmt.Sprintf("%s.%s.v%dk.a%dk.mp4", ts(), v.Id, targetVideoBitrateKbps, TgAudioBitrateKbps)
+		err := FfmpegTranscode(tgvideoFilename, filename2, targetVideoBitrateKbps, TgAudioBitrateKbps)
 		if err != nil {
-			return fmt.Errorf("Ffmpeg StderrPipe: %w", err)
+			return fmt.Errorf("FfmpegTranscode `%s`: %w", tgvideoFilename, err)
 		}
-
-		t0 := time.Now()
-		err = ffmpegCmd.Start()
-		if err != nil {
-			return fmt.Errorf("Ffmpeg Start: %w", err)
-		}
-
-		log("started command `%s`", ffmpegCmd.String())
-
-		_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
-		if err != nil {
-			log("copy from ffmpeg stderr: %w", err)
-		}
-
-		err = ffmpegCmd.Wait()
-		if err != nil {
-			return fmt.Errorf("Ffmpeg Wait: %w", err)
-		}
-
-		log("transcoded video in %v", time.Since(t0).Truncate(time.Second))
-
+		tgvideoCaption += NL + fmt.Sprintf("(transcoded to video:%dkbps audio:%dkbps)", targetVideoBitrateKbps, TgAudioBitrateKbps)
 		if err := os.Remove(tgvideoFilename); err != nil {
-			log("os.Remove: %v", err)
+			log("os.Remove `%s`: %v", tgvideoFilename, err)
 		}
-
-		tgvideoCaption += NL + fmt.Sprintf("(transcoded to audio:%dkbps video:%dkbps)", TgAudioBitrateKbps, targetVideoBitrateKbps)
-		tgvideoFilename = tgvideoTranscodedFilename
+		tgvideoFilename = filename2
 	}
 
 	tgvideoReader, err := os.Open(tgvideoFilename)
@@ -1595,50 +1555,17 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}
 
-	if targetAudioBitrateKbps > 0 {
-		log("transcoding to audio:%dkbps", targetAudioBitrateKbps)
-		tgaudioTranscodedFilename := fmt.Sprintf("%s.%s.%dk.m4a", ts(), v.Id, targetAudioBitrateKbps)
-		ffmpegArgs := FfmpegGlobalOptions
-		ffmpegArgs = append(ffmpegArgs,
-			"-i", tgaudioFilename,
-			"-f", "mp4",
-			"-c:a", "aac",
-			"-b:a", fmt.Sprintf("%dk", targetAudioBitrateKbps),
-			tgaudioTranscodedFilename,
-		)
-		ffmpegCmd := exec.Command(FfmpegPath, ffmpegArgs...)
-
-		ffmpegCmdStderrPipe, err := ffmpegCmd.StderrPipe()
+	if FfmpegPath != "" && targetAudioBitrateKbps > 0 {
+		filename2 := fmt.Sprintf("%s.%s.a%dk.m4a", ts(), v.Id, targetAudioBitrateKbps)
+		err := FfmpegTranscode(tgaudioFilename, filename2, 0, targetAudioBitrateKbps)
 		if err != nil {
-			return fmt.Errorf("Ffmpeg StderrPipe: %w", err)
+			return fmt.Errorf("FfmpegTranscode `%s`: %w", tgaudioFilename, err)
 		}
-
-		t0 := time.Now()
-		err = ffmpegCmd.Start()
-		if err != nil {
-			return fmt.Errorf("Ffmpeg Start: %w", err)
-		}
-
-		log("started command `%s`", ffmpegCmd.String())
-
-		_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
-		if err != nil {
-			log("ERROR copy from ffmpeg stderr: %v", err)
-		}
-
-		err = ffmpegCmd.Wait()
-		if err != nil {
-			return fmt.Errorf("Ffmpeg Wait: %w", err)
-		}
-
-		log("transcoded audio in %v", time.Since(t0).Truncate(time.Second))
-
+		tgaudioCaption += NL + fmt.Sprintf("(transcoded to audio:%dkbps)", targetAudioBitrateKbps)
 		if err := os.Remove(tgaudioFilename); err != nil {
-			log("os.Remove: %v", err)
+			log("os.Remove `%s`: %v", tgaudioFilename, err)
 		}
-
-		tgaudioCaption += NL + fmt.Sprintf("(transcoded to %dkbps)", targetAudioBitrateKbps)
-		tgaudioFilename = tgaudioTranscodedFilename
+		tgaudioFilename = filename2
 	}
 
 	tgaudioReader, err := os.Open(tgaudioFilename)
@@ -2072,6 +1999,65 @@ func tgdeleteMessage(chatid, messageid int64) error {
 	if !tgresp.Ok {
 		return fmt.Errorf("deleteMessage: %s", tgresp.Description)
 	}
+
+	return nil
+}
+
+func FfmpegTranscode(filename, filename2 string, videoBitrateKbps, audioBitrateKbps int64) (err error) {
+	if videoBitrateKbps > 0 {
+		log("transcoding to video:%dkbps audio:%dkbps ", videoBitrateKbps, audioBitrateKbps)
+	} else if audioBitrateKbps > 0 {
+		log("transcoding to audio:%dkbps", audioBitrateKbps)
+	} else {
+		return fmt.Errorf("empty both videoBitrateKbps and audioBitrateKbps")
+	}
+
+	ffmpegArgs := append(FfmpegGlobalOptions,
+		"-i", filename,
+		"-f", "mp4",
+	)
+	if videoBitrateKbps > 0 {
+		ffmpegArgs = append(ffmpegArgs,
+			"-c:v", "h264",
+			"-b:v", fmt.Sprintf("%dk", videoBitrateKbps),
+		)
+	}
+	if audioBitrateKbps > 0 {
+		ffmpegArgs = append(ffmpegArgs,
+			"-c:a", "aac",
+			"-b:a", fmt.Sprintf("%dk", audioBitrateKbps),
+		)
+	}
+	ffmpegArgs = append(ffmpegArgs,
+		filename2,
+	)
+
+	ffmpegCmd := exec.Command(FfmpegPath, ffmpegArgs...)
+
+	ffmpegCmdStderrPipe, err := ffmpegCmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("ffmpeg StderrPipe: %w", err)
+	}
+
+	t0 := time.Now()
+	err = ffmpegCmd.Start()
+	if err != nil {
+		return fmt.Errorf("ffmpeg Start: %w", err)
+	}
+
+	log("started command `%s`", ffmpegCmd.String())
+
+	_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
+	if err != nil {
+		log("copy from ffmpeg stderr: %w", err)
+	}
+
+	err = ffmpegCmd.Wait()
+	if err != nil {
+		return fmt.Errorf("ffmpeg Wait: %w", err)
+	}
+
+	log("transcoded in %v", time.Since(t0).Truncate(time.Second))
 
 	return nil
 }
