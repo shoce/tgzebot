@@ -3,9 +3,8 @@
 # https://hub.docker.com/_/golang/tags
 FROM golang:1.23.2 AS build
 ARG TARGETARCH
-
+WORKDIR /root/
 RUN mkdir -p /root/tgzebot/
-WORKDIR /root/tgzebot/
 
 RUN apt update
 RUN apt -y -q install xz-utils
@@ -18,6 +17,7 @@ RUN mv /root/ffmpeg-*-static/ffmpeg /root/tgzebot/ffmpeg
 RUN /root/tgzebot/ffmpeg -version
 
 COPY tgzebot.go go.mod go.sum /root/tgzebot/
+WORKDIR /root/tgzebot/
 RUN go version
 RUN go get -a -v
 RUN ls -l -a
