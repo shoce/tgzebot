@@ -61,6 +61,8 @@ var (
 	KvAccountId   string
 	KvNamespaceId string
 
+	TelegramApiUrlBase string = "https://api.telegram.org"
+
 	Ctx context.Context
 
 	HttpClient = &http.Client{}
@@ -131,6 +133,11 @@ func init() {
 	KvNamespaceId = GetVar("KvNamespaceId")
 	if KvNamespaceId == "" {
 		log("WARNING KvNamespaceId empty")
+	}
+
+	if url := GetVar("TelegramApiUrlBase"); url != "" {
+		TelegramApiUrlBase = url
+		log("TelegramApiUrlBase:`%s`", TelegramApiUrlBase)
 	}
 
 	Ctx = context.TODO()
@@ -848,7 +855,7 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 	if len(TgUpdateLog) > 0 {
 		offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
 	}
-	getUpdatesUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getUpdates?offset=%d", TgToken, offset)
+	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TelegramApiUrlBase, TgToken, offset)
 	var tgResp TgGetUpdatesResponse
 
 	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
@@ -863,7 +870,7 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 }
 
 func tggetChat(chatid int64) (chat TgChat, err error) {
-	getChatUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getChat?chat_id=%d", TgToken, chatid)
+	getChatUrl := fmt.Sprintf("%s/bot%s/getChat?chat_id=%d", TelegramApiUrlBase, TgToken, chatid)
 	var tgResp TgGetChatResponse
 
 	tries := []int{1, 2, 3}
@@ -908,7 +915,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 
 	var tgresp TgPromoteChatMemberResponse
 	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/promoteChatMember", TgToken),
+		fmt.Sprintf("%s/bot%s/promoteChatMember", TelegramApiUrlBase, TgToken),
 		bytes.NewBuffer(promoteChatMemberJSON),
 		&tgresp,
 	)
@@ -924,7 +931,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 }
 
 func tggetChatAdministrators(chatid int64) (mm []TgChatMember, err error) {
-	getChatAdministratorsUrl := fmt.Sprintf("https://api.telegram.org/bot%s/getChatAdministrators?chat_id=%d", TgToken, chatid)
+	getChatAdministratorsUrl := fmt.Sprintf("%s/bot%s/getChatAdministrators?chat_id=%d", TelegramApiUrlBase, TgToken, chatid)
 	var tgResp TgGetChatAdministratorsResponse
 
 	err = getJson(getChatAdministratorsUrl, &tgResp, nil)
@@ -1823,7 +1830,7 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 	}(mparterr)
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendVideo", TgToken),
+		fmt.Sprintf("%s/bot%s/sendVideo", TelegramApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -1951,7 +1958,7 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 	}(mparterr)
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendAudio", TgToken),
+		fmt.Sprintf("%s/bot%s/sendAudio", TelegramApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -2007,7 +2014,7 @@ func tgsendMessage(text string, chatid int64, parsemode string, replytomessageid
 
 	var tgresp TgResponse
 	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", TgToken),
+		fmt.Sprintf("%s/bot%s/sendMessage", TelegramApiUrlBase, TgToken),
 		bytes.NewBuffer(sendMessageJSON),
 		&tgresp,
 	)
@@ -2036,7 +2043,7 @@ func tgdeleteMessage(chatid, messageid int64) error {
 
 	var tgresp TgResponseShort
 	err = postJson(
-		fmt.Sprintf("https://api.telegram.org/bot%s/deleteMessage", TgToken),
+		fmt.Sprintf("%s/bot%s/deleteMessage", TelegramApiUrlBase, TgToken),
 		bytes.NewBuffer(deleteMessageJSON),
 		&tgresp,
 	)

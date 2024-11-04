@@ -9,6 +9,9 @@ KvNamespaceId: ""
 TgToken: ""
 TgZeChatId: ""
 
-ImageName: ghcr.io/shoce/tgzebot
-ImageTag: ""
+ImageNameTgZeBot: ghcr.io/shoce/tgzebot
+ImageTagTgZeBot: ""
+
+ImageNameTgBotServer: ghcr.io/shoce/tgbotserver
+ImageTagTgBotServer: ""
 
