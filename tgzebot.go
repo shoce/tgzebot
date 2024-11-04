@@ -140,6 +140,24 @@ func init() {
 		log("TelegramApiUrlBase:`%s`", TelegramApiUrlBase)
 	}
 
+	if s := GetVar("TgMaxFileSizeBytes"); s != "" {
+		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
+			TgMaxFileSizeBytes = v
+			log("TgMaxFileSizeBytes:%v", TgMaxFileSizeBytes)
+		} else {
+			log("WARNING invalid TgMaxFileSizeBytes:`%s`", s)
+		}
+	}
+
+	if s := GetVar("TgAudioBitrateKbps"); s != "" {
+		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
+			TgAudioBitrateKbps = v
+			log("TgAudioBitrateKbps:%v", TgAudioBitrateKbps)
+		} else {
+			log("WARNING invalid TgAudioBitrateKbps:`%s`", s)
+		}
+	}
+
 	Ctx = context.TODO()
 
 	YtProxy := http.ProxyFromEnvironment
