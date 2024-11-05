@@ -1092,7 +1092,7 @@ func processTgUpdates() {
 			}
 		}
 
-		log("telegram message from:%s chat:%s text: `%s`", m.From.Username, m.Chat.Username, m.Text)
+		log("telegram message from:`%s` chat:`%s` text:`%s`", m.From.Username, m.Chat.Username, m.Text)
 		if m.Text == "" {
 			continue
 		}
@@ -1392,7 +1392,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("downloaded video in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded video from youtube in %v", time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
 		if targetVideoBitrateKbps > 0 {
@@ -1550,7 +1550,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("downloaded audio in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded audio from youtube in %v", time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
 		if targetAudioBitrateKbps > 0 {
