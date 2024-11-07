@@ -1092,7 +1092,7 @@ func processTgUpdates() {
 			}
 		}
 
-		log("telegram message from:`%s` chat:`%s` text:`%s`", m.From.Username, m.Chat.Username, m.Text)
+		log("#"+NL+"telegram message from:`%s` chat:`%s` text:`%s`", m.From.Username, m.Chat.Username, m.Text)
 		if m.Text == "" {
 			continue
 		}
