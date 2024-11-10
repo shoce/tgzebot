@@ -293,7 +293,7 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tgsendMessage(fmt.Sprintf("%s: sigterm received", os.Args[0]), TgZeChatId, "", 0)
+		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), TgZeChatId, "", 0)
 		log("sigterm received")
 		os.Exit(1)
 	}(sigterm)
@@ -1055,7 +1055,7 @@ func processTgUpdates() {
 			}
 		} else {
 			log("WARNING unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
-			_, err = tgsendMessage(fmt.Sprintf("Unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
+			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("WARNING tgsendMessage: %v", err)
 				continue
@@ -1139,7 +1139,7 @@ func processTgUpdates() {
 		if strings.TrimSpace(m.Text) == "/id" {
 			_, err = tgsendMessage(
 				fmt.Sprintf("username `%s`"+NL+"user id `%d`"+NL+"chat id `%d`", m.From.Username, m.From.Id, m.Chat.Id),
-				m.Chat.Id, "MarkdownV2", 0,
+				m.Chat.Id, "MarkdownV2", m.MessageId,
 			)
 			if err != nil {
 				log("tgsendMessage: %v", err)
@@ -1197,7 +1197,7 @@ func processTgUpdates() {
 					log("tgpromoteChatMember %d %d: ok", i, m.From.Id)
 				}
 			}
-			_, err = tgsendMessage(fmt.Sprintf("Ok for %d of total %d channels.", totalok, total), m.Chat.Id, "", m.MessageId)
+			_, err = tgsendMessage(fmt.Sprintf("ok for %d of total %d channels.", totalok, total), m.Chat.Id, "", m.MessageId)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 			}
@@ -1281,7 +1281,7 @@ func processTgUpdates() {
 					}
 				}
 			} else {
-				_, err = tgsendMessage(fmt.Sprintf("%s\nError: %v", m.Text, postingerr), m.Chat.Id, "", 0)
+				_, err = tgsendMessage(fmt.Sprintf("ERROR %v", postingerr), m.Chat.Id, "", m.MessageId)
 				if err != nil {
 					log("tgsendMessage: %v", err)
 				}
