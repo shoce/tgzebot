@@ -1247,7 +1247,7 @@ func processTgUpdates() {
 			for _, v := range videos {
 				vinfo, err = YtCl.GetVideoContext(Ctx, v.Id)
 				if err != nil {
-					log("WARNING GetVideoContext: %v", err)
+					log("ERROR GetVideoContext: %v", err)
 					postingerr = err
 					break
 				}
@@ -1255,14 +1255,14 @@ func processTgUpdates() {
 				if downloadvideo {
 					err = postVideo(v, vinfo, m)
 					if err != nil {
-						log("postVideo: %v", err)
+						log("ERROR postVideo: %v", err)
 						postingerr = err
 						break
 					}
 				} else {
 					err = postAudio(v, vinfo, m)
 					if err != nil {
-						log("postAudio: %v", err)
+						log("ERROR postAudio: %v", err)
 						postingerr = err
 						break
 					}
@@ -1315,7 +1315,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			continue
 		}
 		flang := strings.ToLower(f.LanguageDisplayName())
-		log("format: ContentLength:%dMB Language:%#v", f.ContentLength>>20, flang)
+		log("format: ContentLength:%dmb Language:%#v", f.ContentLength>>20, flang)
 		if flang != "" {
 			skip := true
 			for _, l := range DownloadLanguages {
@@ -1349,7 +1349,8 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	defer ytstream.Close()
 
 	log(
-		"downloading youtube video size:%dMB quality:%s bitrate:%dkbps duration:%s language:%#v",
+		"downloading youtu.be/%s video size:%dmb quality:%s bitrate:%dkbps duration:%s language:%#v",
+		v.Id,
 		ytstreamsize>>20,
 		videoFormat.QualityLabel,
 		videoFormat.Bitrate>>10,
@@ -1366,7 +1367,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	tgvideoFilename := fmt.Sprintf("%s.%s.mp4", ts(), v.Id)
 	tgvideoFile, err := os.OpenFile(tgvideoFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		return fmt.Errorf("Create file: %w", err)
+		return fmt.Errorf("os.OpenFile: %w", err)
 	}
 
 	if DEBUG {
@@ -1382,7 +1383,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	t0 := time.Now()
 	_, err = io.Copy(tgvideoFile, ytstream)
 	if err != nil {
-		return fmt.Errorf("Download from youtube: %w", err)
+		return fmt.Errorf("download youtu.be/%s video: %w", v.Id, err)
 	}
 
 	if err := ytstream.Close(); err != nil {
@@ -1392,7 +1393,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("downloaded video from youtube in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded youtu.be/%s video in %v", v.Id, time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
 		if targetVideoBitrateKbps > 0 {
@@ -1419,7 +1420,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 
 	tgvideoReader, err := os.Open(tgvideoFilename)
 	if err != nil {
-		return fmt.Errorf("Open file: %w", err)
+		return fmt.Errorf("os.Open: %w", err)
 	}
 	defer tgvideoReader.Close()
 
@@ -1471,7 +1472,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 			continue
 		}
 		flang := strings.ToLower(f.LanguageDisplayName())
-		log("format: ContentLength:%dMB Language:%#v", f.ContentLength>>20, flang)
+		log("format: ContentLength:%dmb Language:%#v", f.ContentLength>>20, flang)
 		if flang != "" {
 			skip := true
 			for _, l := range DownloadLanguages {
@@ -1508,7 +1509,8 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log(
-		"downloading youtube audio size:%dMB bitrate:%dkbps duration:%s language:%#v",
+		"downloading youtu.be/%s audio size:%dmb bitrate:%dkbps duration:%s language:%#v",
+		v.Id,
 		ytstreamsize>>20,
 		audioFormat.Bitrate>>10,
 		vinfo.Duration,
@@ -1524,7 +1526,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	tgaudioFilename := fmt.Sprintf("%s.%s.m4a", ts(), v.Id)
 	tgaudioFile, err := os.OpenFile(tgaudioFilename, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
-		return fmt.Errorf("Create file: %w", err)
+		return fmt.Errorf("create file: %w", err)
 	}
 
 	if DEBUG {
@@ -1540,7 +1542,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	t0 := time.Now()
 	_, err = io.Copy(tgaudioFile, ytstream)
 	if err != nil {
-		return fmt.Errorf("Download from youtube: %w", err)
+		return fmt.Errorf("download youtu.be/%s audio: %w", v.Id, err)
 	}
 
 	if err := ytstream.Close(); err != nil {
@@ -1550,7 +1552,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.File.Close: %w", err)
 	}
 
-	log("downloaded audio from youtube in %v", time.Since(t0).Truncate(time.Second))
+	log("downloaded youtu.be/%s audio in %v", v.Id, time.Since(t0).Truncate(time.Second))
 	if DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
 		if targetAudioBitrateKbps > 0 {
@@ -1577,7 +1579,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 
 	tgaudioReader, err := os.Open(tgaudioFilename)
 	if err != nil {
-		return fmt.Errorf("Open file: %w", err)
+		return fmt.Errorf("os.Open: %w", err)
 	}
 	defer tgaudioReader.Close()
 
