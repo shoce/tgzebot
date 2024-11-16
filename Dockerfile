@@ -20,7 +20,7 @@ RUN mkdir -p /root/tgzebot/
 WORKDIR /root/tgzebot/
 COPY tgzebot.go go.mod go.sum /root/tgzebot/
 RUN go version
-RUN go get -a -v
+RUN go get -v
 RUN go build -o tgzebot tgzebot.go
 RUN ls -l -a
 

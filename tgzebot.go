@@ -3,7 +3,7 @@
 https://pkg.go.dev/github.com/kkdai/youtube/v2/
 https://core.telegram.org/bots/api/
 
-go get -a -u -v
+go get -u -v
 go get github.com/kkdai/youtube/v2@master
 go mod tidy
 
@@ -986,6 +986,8 @@ func processTgUpdates() {
 	var m, prevm TgMessage
 	for _, u := range uu {
 
+		log("#")
+
 		if len(TgUpdateLog) > 0 && TgUpdateLog[len(TgUpdateLog)-1] > u.UpdateId {
 			log("WARNING this telegram Update was processed already, skipping")
 			continue
@@ -1092,7 +1094,7 @@ func processTgUpdates() {
 			}
 		}
 
-		log("#"+NL+"telegram message from:`%s` chat:`%s` text:`%s`", m.From.Username, m.Chat.Username, m.Text)
+		log("telegram message from:`%s` chat:`%s` text:`%s`", m.From.Username, m.Chat.Username, m.Text)
 		if m.Text == "" {
 			continue
 		}
