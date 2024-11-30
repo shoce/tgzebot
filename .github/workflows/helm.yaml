@@ -45,11 +45,4 @@ jobs:
           force: true
           chart-folder: helm
 
-      - name: delete-package-versions
-        uses: actions/delete-package-versions@v5
-        with:
-          package-name: ${{ env.HELM_CHART_NAME }}
-          package-type: container
-          min-versions-to-keep: 3
-
 
