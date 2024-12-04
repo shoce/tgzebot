@@ -1,5 +1,8 @@
 ---
 
+DEBUG: false
+
+Interval: 1m11s
 
 ImageNameTgZeBot: ghcr.io/shoce/tgzebot
 ImageTagTgZeBot: ""

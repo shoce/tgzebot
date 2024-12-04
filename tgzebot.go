@@ -179,17 +179,17 @@ func init() {
 	proxyTransport.(*http.Transport).Proxy = YtProxy
 	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
 
-	IntervalString := GetVar("Interval")
-	if IntervalString == "" {
+	if s := GetVar("Interval"); s != "" {
+		Interval, err = time.ParseDuration(s)
+		if err != nil {
+			log("ERROR time.ParseDuration Interval:`%s`: %v", s, err)
+			os.Exit(1)
+		}
+		log("Interval: %v", Interval)
+	} else {
 		log("ERROR Interval empty")
 		os.Exit(1)
 	}
-	Interval, err = time.ParseDuration(IntervalString)
-	if err != nil {
-		log("ERROR time.ParseDuration Interval:`%s`: %v", IntervalString, err)
-		os.Exit(1)
-	}
-	log("Interval: %v", Interval)
 
 	TgToken = GetVar("TgToken")
 	if TgToken == "" {
@@ -301,8 +301,7 @@ func main() {
 	for {
 		t0 := time.Now()
 		processTgUpdates()
-		dur := time.Now().Sub(t0)
-		if dur < Interval {
+		if dur := time.Now().Sub(t0); dur < Interval {
 			time.Sleep(Interval - dur)
 		}
 	}
@@ -624,28 +623,20 @@ func GetVar(name string) (value string) {
 		log("DEBUG GetVar: %s", name)
 	}
 
-	var err error
-
 	value = os.Getenv(name)
-	if value != "" {
-		return value
-	}
 
 	if YamlConfigPath != "" {
-		value, err = YamlGet(name)
-		if err != nil {
+		if v, err := YamlGet(name); err != nil {
 			log("WARNING GetVar YamlGet %s: %v", name, err)
-		}
-		if value != "" {
-			return value
+		} else if v != "" {
+			value = v
 		}
 	}
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
 			log("WARNING GetVar KvGet %s: %v", name, err)
-			return ""
-		} else {
+		} else if v != "" {
 			value = v
 		}
 	}
