@@ -116,27 +116,27 @@ func init() {
 		log("WARNING YamlConfigPath empty")
 	}
 
-	KvToken = GetVar("KvToken")
+	KvToken, _ = GetVar("KvToken")
 	if KvToken == "" {
 		log("WARNING KvToken empty")
 	}
 
-	KvAccountId = GetVar("KvAccountId")
+	KvAccountId, _ = GetVar("KvAccountId")
 	if KvAccountId == "" {
 		log("WARNING KvAccountId empty")
 	}
 
-	KvNamespaceId = GetVar("KvNamespaceId")
+	KvNamespaceId, _ = GetVar("KvNamespaceId")
 	if KvNamespaceId == "" {
 		log("WARNING KvNamespaceId empty")
 	}
 
-	if url := GetVar("TelegramApiUrlBase"); url != "" {
+	if url, _ := GetVar("TelegramApiUrlBase"); url != "" {
 		TelegramApiUrlBase = url
 		log("TelegramApiUrlBase:`%s`", TelegramApiUrlBase)
 	}
 
-	if s := GetVar("TgMaxFileSizeBytes"); s != "" {
+	if s, _ := GetVar("TgMaxFileSizeBytes"); s != "" {
 		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
 			TgMaxFileSizeBytes = v
 			log("TgMaxFileSizeBytes:%v", TgMaxFileSizeBytes)
@@ -145,7 +145,7 @@ func init() {
 		}
 	}
 
-	if s := GetVar("TgAudioBitrateKbps"); s != "" {
+	if s, _ := GetVar("TgAudioBitrateKbps"); s != "" {
 		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
 			TgAudioBitrateKbps = v
 			log("TgAudioBitrateKbps:%v", TgAudioBitrateKbps)
@@ -157,14 +157,14 @@ func init() {
 	Ctx = context.TODO()
 
 	YtProxy := http.ProxyFromEnvironment
-	if v := GetVar("YtProxyList"); v != "" {
+	if v, _ := GetVar("YtProxyList"); v != "" {
 		pp := strings.Split(v, " ")
 		rand.Seed(time.Now().UnixNano())
 		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
 			log("WARNING SetVar YtProxy: %v", err)
 		}
 	}
-	YtProxyUrl := GetVar("YtProxy")
+	YtProxyUrl, _ := GetVar("YtProxy")
 	if YtProxyUrl != "" {
 		if !strings.HasPrefix(YtProxyUrl, "https://") {
 			YtProxyUrl = "https://" + YtProxyUrl
@@ -179,7 +179,7 @@ func init() {
 	proxyTransport.(*http.Transport).Proxy = YtProxy
 	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
 
-	if s := GetVar("Interval"); s != "" {
+	if s, _ := GetVar("Interval"); s != "" {
 		Interval, err = time.ParseDuration(s)
 		if err != nil {
 			log("ERROR time.ParseDuration Interval:`%s`: %v", s, err)
@@ -191,25 +191,30 @@ func init() {
 		os.Exit(1)
 	}
 
-	TgToken = GetVar("TgToken")
+	TgToken, _ = GetVar("TgToken")
 	if TgToken == "" {
 		log("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
-	for _, s := range strings.Split(GetVar("TgUpdateLog"), " ") {
-		if s == "" {
-			continue
+	if v, err := GetVar("TgUpdateLog"); err != nil {
+		log("ERROR GetVar TgUpdateLog: %w", err)
+		os.Exit(1)
+	} else {
+		for _, s := range strings.Split(v, " ") {
+			if s == "" {
+				continue
+			}
+			i, err := strconv.ParseInt(s, 10, 0)
+			if err != nil {
+				log("WARNING %v", err)
+				continue
+			}
+			TgUpdateLog = append(TgUpdateLog, i)
 		}
-		i, err := strconv.ParseInt(s, 10, 0)
-		if err != nil {
-			log("WARNING %v", err)
-			continue
-		}
-		TgUpdateLog = append(TgUpdateLog, i)
 	}
 
-	if v := GetVar("TgZeChatId"); v == "" {
+	if v, _ := GetVar("TgZeChatId"); v == "" {
 		log("ERROR TgZeChatId empty")
 		os.Exit(1)
 	} else {
@@ -220,34 +225,34 @@ func init() {
 		}
 	}
 
-	TgCommandChannels = GetVar("TgCommandChannels")
+	TgCommandChannels, _ = GetVar("TgCommandChannels")
 	if TgCommandChannels == "" {
 		log("ERROR TgCommandChannels empty")
 		os.Exit(1)
 	}
 
-	TgCommandChannelsPromoteAdmin = GetVar("TgCommandChannelsPromoteAdmin")
+	TgCommandChannelsPromoteAdmin, _ = GetVar("TgCommandChannelsPromoteAdmin")
 	if TgCommandChannelsPromoteAdmin == "" {
 		log("ERROR TgCommandChannelsPromoteAdmin empty")
 		os.Exit(1)
 	}
 
-	TgQuest1 = GetVar("TgQuest1")
-	TgQuest1Key = GetVar("TgQuest1Key")
+	TgQuest1, _ = GetVar("TgQuest1")
+	TgQuest1Key, _ = GetVar("TgQuest1Key")
 
-	TgQuest2 = GetVar("TgQuest2")
-	TgQuest2Key = GetVar("TgQuest2Key")
+	TgQuest2, _ = GetVar("TgQuest2")
+	TgQuest2Key, _ = GetVar("TgQuest2Key")
 
-	TgQuest3 = GetVar("TgQuest3")
-	TgQuest3Key = GetVar("TgQuest3Key")
+	TgQuest3, _ = GetVar("TgQuest3")
+	TgQuest3Key, _ = GetVar("TgQuest3Key")
 
-	YtKey = GetVar("YtKey")
+	YtKey, _ = GetVar("YtKey")
 	if YtKey == "" {
 		log("ERROR YtKey empty")
 		os.Exit(1)
 	}
 
-	if v := GetVar("YtMaxResults"); v != "" {
+	if v, _ := GetVar("YtMaxResults"); v != "" {
 		YtMaxResults, err = strconv.ParseInt(v, 10, 0)
 		if err != nil {
 			log("ERROR invalid YtMaxResults: %v", err)
@@ -255,35 +260,40 @@ func init() {
 		}
 	}
 
-	if v := GetVar("YtHttpClientUserAgent"); v != "" {
+	if v, _ := GetVar("YtHttpClientUserAgent"); v != "" {
 		YtHttpClientUserAgent = v
 	}
-	if v := GetVar("YtReString"); v != "" {
+	if v, _ := GetVar("YtReString"); v != "" {
 		YtReString = v
 	}
-	if v := GetVar("YtListReString"); v != "" {
+	if v, _ := GetVar("YtListReString"); v != "" {
 		YtListReString = v
 	}
 
-	if v := GetVar("FfmpegPath"); v != "" {
+	if v, _ := GetVar("FfmpegPath"); v != "" {
 		FfmpegPath = v
 	}
 	log("FfmpegPath:`%s`", FfmpegPath)
 
-	if v := GetVar("FfmpegGlobalOptions"); v != "" {
+	if v, _ := GetVar("FfmpegGlobalOptions"); v != "" {
 		FfmpegGlobalOptions = strings.Split(v, " ")
 	}
 
-	if v := GetVar("DownloadLanguages"); v != "" {
+	if v, _ := GetVar("DownloadLanguages"); v != "" {
 		DownloadLanguages = strings.Split(v, " ")
 	}
 
-	for _, s := range strings.Split(GetVar("TgAllChannelsChatIds"), " ") {
-		if i, err := strconv.ParseInt(s, 10, 0); err != nil {
-			log("WARNING invalid TgAllChannelsChatIds: %v", err)
-			continue
-		} else {
-			TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
+	if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
+		log("ERROR GetVar TgAllChannelsChatIds: %w", err)
+		os.Exit(1)
+	} else {
+		for _, s := range strings.Split(v, " ") {
+			if i, err := strconv.ParseInt(s, 10, 0); err != nil {
+				log("WARNING invalid TgAllChannelsChatIds: %v", err)
+				continue
+			} else {
+				TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
+			}
 		}
 	}
 }
@@ -618,16 +628,17 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 	return nil
 }
 
-func GetVar(name string) (value string) {
+func GetVar(name string) (value string, err error) {
 	if DEBUG {
-		log("DEBUG GetVar: %s", name)
+		log("DEBUG GetVar `%s`", name)
 	}
 
 	value = os.Getenv(name)
 
 	if YamlConfigPath != "" {
 		if v, err := YamlGet(name); err != nil {
-			log("WARNING GetVar YamlGet %s: %v", name, err)
+			log("WARNING GetVar YamlGet `%s`: %w", name, err)
+			return "", err
 		} else if v != "" {
 			value = v
 		}
@@ -635,13 +646,14 @@ func GetVar(name string) (value string) {
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet %s: %v", name, err)
+			log("WARNING GetVar KvGet `%s`: %w", name, err)
+			return "", err
 		} else if v != "" {
 			value = v
 		}
 	}
 
-	return value
+	return value, nil
 }
 
 func SetVar(name, value string) (err error) {
@@ -1044,13 +1056,13 @@ func processTgUpdates() {
 			)
 			_, err = tgsendMessage(report, TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
-				log("tgsendMessage: %v", err)
+				log("tgsendMessage: %w", err)
 			}
 		} else {
 			log("WARNING unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
 			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
-				log("WARNING tgsendMessage: %v", err)
+				log("WARNING tgsendMessage: %w", err)
 				continue
 			}
 			continue
@@ -1078,9 +1090,12 @@ func processTgUpdates() {
 			}
 			s := strings.Join(ss, " ")
 
-			if GetVar("TgAllChannelsChatIds") != s {
+			if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
+				log("ERROR GetVar TgUpdateLog: %w", err)
+				continue
+			} else if v != s {
 				if err := SetVar("TgAllChannelsChatIds", s); err != nil {
-					log("WARNING SetVar TgAllChannelsChatIds: %v", err)
+					log("WARNING SetVar TgAllChannelsChatIds: %w", err)
 				}
 			}
 		}
