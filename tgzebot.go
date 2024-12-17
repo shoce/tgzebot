@@ -992,12 +992,7 @@ func processTgUpdates() {
 		log("#")
 
 		if len(TgUpdateLog) > 0 && TgUpdateLog[len(TgUpdateLog)-1] > u.UpdateId {
-			log("WARNING this telegram Update was processed already, skipping")
-			continue
-		}
-
-		if len(TgUpdateLog) > 1 && TgUpdateLog[len(TgUpdateLog)-1] == u.UpdateId && TgUpdateLog[len(TgUpdateLog)-2] == u.UpdateId {
-			log("WARNING this telegram Update was tried twice already, skipping")
+			log("WARNING this telegram update id:%d was processed already, skipping", u.UpdateId)
 			continue
 		}
 
@@ -1005,11 +1000,12 @@ func processTgUpdates() {
 		if len(TgUpdateLog) > 6 {
 			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-6:]
 		}
-		ltss := []string{}
+
+		TgUpdateLogString := []string{}
 		for _, i := range TgUpdateLog {
-			ltss = append(ltss, fmt.Sprintf("%d", i))
+			TgUpdateLogString = append(TgUpdateLogString, fmt.Sprintf("%d", i))
 		}
-		if err := SetVar("TgUpdateLog", strings.Join(ltss, " ")); err != nil {
+		if err := SetVar("TgUpdateLog", strings.Join(TgUpdateLogString, " ")); err != nil {
 			log("WARNING SetVar TgUpdateLog: %v", err)
 		}
 
@@ -1058,7 +1054,7 @@ func processTgUpdates() {
 				log("tgsendMessage: %w", err)
 			}
 		} else {
-			log("WARNING unsupported type of update (id:%d) received:"+NL+"%s", u.UpdateId, respjson)
+			log("WARNING unsupported type of update id:%d received:"+NL+"%s", u.UpdateId, respjson)
 			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("WARNING tgsendMessage: %w", err)
