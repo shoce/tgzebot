@@ -997,14 +997,13 @@ func processTgUpdates() {
 		}
 
 		if len(TgUpdateLog) > 1 && TgUpdateLog[len(TgUpdateLog)-1] == u.UpdateId && TgUpdateLog[len(TgUpdateLog)-2] == u.UpdateId {
-			//log("TgUpdateLog: %v", TgUpdateLog)
 			log("WARNING this telegram Update was tried twice already, skipping")
 			continue
 		}
 
 		TgUpdateLog = append(TgUpdateLog, u.UpdateId)
-		if len(TgUpdateLog) > 4 {
-			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-4:]
+		if len(TgUpdateLog) > 6 {
+			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-6:]
 		}
 		ltss := []string{}
 		for _, i := range TgUpdateLog {
@@ -1091,7 +1090,7 @@ func processTgUpdates() {
 			s := strings.Join(ss, " ")
 
 			if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
-				log("ERROR GetVar TgUpdateLog: %w", err)
+				log("ERROR GetVar TgAllChannelsChatIds: %w", err)
 				continue
 			} else if v != s {
 				if err := SetVar("TgAllChannelsChatIds", s); err != nil {
