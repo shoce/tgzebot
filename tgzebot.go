@@ -992,8 +992,8 @@ func processTgUpdates() {
 
 		log("#")
 
-		if len(TgUpdateLog) > 0 && TgUpdateLog[len(TgUpdateLog)-1] > u.UpdateId {
-			log("WARNING this telegram update id:%d was processed already, skipping", u.UpdateId)
+		if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
+			log("WARNING this telegram update id:%d is older than last id:%d, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
 			continue
 		}
 
