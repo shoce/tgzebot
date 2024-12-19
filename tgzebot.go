@@ -89,7 +89,7 @@ var (
 
 	DownloadLanguages []string
 
-	FfmpegPath          string
+	FfmpegPath          string = "/bin/ffmpeg"
 	FfmpegGlobalOptions []string
 
 	TgCommandChannels             string
