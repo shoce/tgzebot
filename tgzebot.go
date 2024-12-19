@@ -43,6 +43,8 @@ const (
 	NL = "\n"
 
 	BEAT = time.Duration(24) * time.Hour / 1000
+
+	TgUpdateLogSize = 108
 )
 
 var (
@@ -1009,8 +1011,8 @@ func processTgUpdates() {
 		}
 
 		TgUpdateLog = append(TgUpdateLog, u.UpdateId)
-		if len(TgUpdateLog) > 12 {
-			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-12:]
+		if len(TgUpdateLog) > TgUpdateLogSize {
+			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-TgUpdateLogSize:]
 		}
 
 		TgUpdateLogString := []string{}
