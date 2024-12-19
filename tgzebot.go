@@ -58,8 +58,6 @@ var (
 	KvAccountId   string
 	KvNamespaceId string
 
-	TelegramApiUrlBase string = "https://api.telegram.org"
-
 	Ctx context.Context
 
 	HttpClient = &http.Client{}
@@ -79,6 +77,8 @@ var (
 	// TODO add support for https://www.youtube.com/watch?&list=PL5Qevr-CpW_yZZjYspehnFc-QRKQMCKHB&v=1nzx7O7ndfI&index=34
 	YtReString     = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
 	YtListReString = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
+
+	TgApiUrlBase string = "https://api.telegram.org"
 
 	TgToken     string
 	TgUpdateLog []int64
@@ -133,9 +133,9 @@ func init() {
 		log("WARNING KvNamespaceId empty")
 	}
 
-	if url, _ := GetVar("TelegramApiUrlBase"); url != "" {
-		TelegramApiUrlBase = url
-		log("TelegramApiUrlBase:`%s`", TelegramApiUrlBase)
+	if url, _ := GetVar("TgApiUrlBase"); url != "" {
+		TgApiUrlBase = url
+		log("TgApiUrlBase:`%s`", TgApiUrlBase)
 	}
 
 	if s, _ := GetVar("TgMaxFileSizeBytes"); s != "" {
@@ -883,10 +883,10 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 		if len(TgUpdateLog) > 0 {
 			offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
 		}
-		getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TelegramApiUrlBase, TgToken, offset)
+		getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TgApiUrlBase, TgToken, offset)
 	*/
 
-	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates", TelegramApiUrlBase, TgToken)
+	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates", TgApiUrlBase, TgToken)
 	var tgResp TgGetUpdatesResponse
 
 	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
@@ -901,7 +901,7 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 }
 
 func tggetChat(chatid int64) (chat TgChat, err error) {
-	getChatUrl := fmt.Sprintf("%s/bot%s/getChat?chat_id=%d", TelegramApiUrlBase, TgToken, chatid)
+	getChatUrl := fmt.Sprintf("%s/bot%s/getChat?chat_id=%d", TgApiUrlBase, TgToken, chatid)
 	var tgResp TgGetChatResponse
 
 	tries := []int{1, 2, 3}
@@ -946,7 +946,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 
 	var tgresp TgPromoteChatMemberResponse
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/promoteChatMember", TelegramApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/promoteChatMember", TgApiUrlBase, TgToken),
 		bytes.NewBuffer(promoteChatMemberJSON),
 		&tgresp,
 	)
@@ -962,7 +962,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 }
 
 func tggetChatAdministrators(chatid int64) (mm []TgChatMember, err error) {
-	getChatAdministratorsUrl := fmt.Sprintf("%s/bot%s/getChatAdministrators?chat_id=%d", TelegramApiUrlBase, TgToken, chatid)
+	getChatAdministratorsUrl := fmt.Sprintf("%s/bot%s/getChatAdministrators?chat_id=%d", TgApiUrlBase, TgToken, chatid)
 	var tgResp TgGetChatAdministratorsResponse
 
 	err = getJson(getChatAdministratorsUrl, &tgResp, nil)
@@ -1804,7 +1804,7 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 	t0 := time.Now()
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("%s/bot%s/sendVideo", TelegramApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendVideo", TgApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -1934,7 +1934,7 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 	t0 := time.Now()
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("%s/bot%s/sendAudio", TelegramApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendAudio", TgApiUrlBase, TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -1990,7 +1990,7 @@ func tgsendMessage(text string, chatid int64, parsemode string, replytomessageid
 
 	var tgresp TgResponse
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/sendMessage", TelegramApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendMessage", TgApiUrlBase, TgToken),
 		bytes.NewBuffer(sendMessageJSON),
 		&tgresp,
 	)
@@ -2019,7 +2019,7 @@ func tgdeleteMessage(chatid, messageid int64) error {
 
 	var tgresp TgResponseShort
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/deleteMessage", TelegramApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/deleteMessage", TgApiUrlBase, TgToken),
 		bytes.NewBuffer(deleteMessageJSON),
 		&tgresp,
 	)
