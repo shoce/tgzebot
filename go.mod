@@ -4,6 +4,7 @@ go 1.23
 
 require (
 	github.com/kkdai/youtube/v2 v2.10.2-0.20241204003542-49f650404aac
+	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	gopkg.in/yaml.v3 v3.0.1
 )
 

@@ -3,9 +3,8 @@
 https://pkg.go.dev/github.com/kkdai/youtube/v2/
 https://core.telegram.org/bots/api/
 
-go get -u -v
+GoGet
 go get github.com/kkdai/youtube/v2@master
-go mod tidy
 
 GoFmt
 GoBuildNull
@@ -36,6 +35,7 @@ import (
 	"unicode"
 
 	ytdl "github.com/kkdai/youtube/v2"
+	"golang.org/x/exp/slices"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -875,11 +875,16 @@ func tgescape(text string) string {
 }
 
 func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
-	var offset int64
-	if len(TgUpdateLog) > 0 {
-		offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
-	}
-	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TelegramApiUrlBase, TgToken, offset)
+
+	/*
+		var offset int64
+		if len(TgUpdateLog) > 0 {
+			offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
+		}
+		getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TelegramApiUrlBase, TgToken, offset)
+	*/
+
+	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates", TelegramApiUrlBase, TgToken)
 	var tgResp TgGetUpdatesResponse
 
 	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
@@ -992,14 +997,20 @@ func processTgUpdates() {
 
 		log("#")
 
-		if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
-			log("WARNING this telegram update id:%d is older than last id:%d, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
+		/*
+			if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
+				log("WARNING this telegram update id:%d is older than last id:%d, skipping", u.UpdateId, TgUpdateLog[len(TgUpdateLog)-1])
+				continue
+			}
+		*/
+
+		if slices.Contains(TgUpdateLog, u.UpdateId) {
 			continue
 		}
 
 		TgUpdateLog = append(TgUpdateLog, u.UpdateId)
-		if len(TgUpdateLog) > 6 {
-			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-6:]
+		if len(TgUpdateLog) > 12 {
+			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-12:]
 		}
 
 		TgUpdateLogString := []string{}
