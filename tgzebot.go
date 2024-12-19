@@ -1007,6 +1007,7 @@ func processTgUpdates() {
 		*/
 
 		if slices.Contains(TgUpdateLog, u.UpdateId) {
+			log("WARNING this telegram update id:%d was already processed, skipping", u.UpdateId)
 			continue
 		}
 
