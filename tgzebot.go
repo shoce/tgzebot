@@ -205,14 +205,15 @@ func init() {
 			if s == "" {
 				continue
 			}
-			i, err := strconv.ParseInt(s, 10, 0)
-			if err != nil {
+			if i, err := strconv.ParseInt(s, 10, 0); err != nil {
 				log("WARNING %v", err)
 				continue
+			} else {
+				TgUpdateLog = append(TgUpdateLog, i)
 			}
-			TgUpdateLog = append(TgUpdateLog, i)
 		}
 	}
+	log("DEBUG TgUpdateLog: %+v", TgUpdateLog)
 
 	if v, _ := GetVar("TgZeChatId"); v == "" {
 		log("ERROR TgZeChatId empty")
