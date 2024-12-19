@@ -18,6 +18,7 @@ FROM golang:1.23.4 AS build
 
 RUN mkdir -p /root/tgzebot/
 WORKDIR /root/tgzebot/
+
 COPY tgzebot.go go.mod go.sum /root/tgzebot/
 RUN go version
 RUN go get -v

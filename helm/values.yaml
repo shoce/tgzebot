@@ -17,10 +17,3 @@ TgToken: ""
 TgZeChatId: ""
 
 
-ImageNameTgBotServer: ghcr.io/shoce/tgbotserver
-ImageTagTgBotServer: ""
-
-TgBotServerApiId: ""
-TgBotServerApiHash: ""
-
-
