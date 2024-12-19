@@ -133,8 +133,8 @@ func init() {
 		log("WARNING KvNamespaceId empty")
 	}
 
-	if url, _ := GetVar("TgApiUrlBase"); url != "" {
-		TgApiUrlBase = url
+	if v, _ := GetVar("TgApiUrlBase"); v != "" {
+		TgApiUrlBase = v
 		log("TgApiUrlBase:`%s`", TgApiUrlBase)
 	}
 
