@@ -274,7 +274,10 @@ func init() {
 		YtListReString = v
 	}
 
-	if v, _ := GetVar("FfmpegPath"); v != "" {
+	if v, err := GetVar("FfmpegPath"); err != nil {
+		log("ERROR %w", err)
+		os.Exit(1)
+	} else {
 		FfmpegPath = v
 	}
 	log("FfmpegPath:`%s`", FfmpegPath)
