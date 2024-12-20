@@ -3,7 +3,7 @@ module github.com/shoce/tgzebot
 go 1.23
 
 require (
-	github.com/kkdai/youtube/v2 v2.10.2-0.20241204003542-49f650404aac
+	github.com/kkdai/youtube/v2 v2.10.2-0.20241220143740-207c91bf7f4f
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -16,5 +16,3 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
-
-replace github.com/kkdai/youtube/v2 => github.com/ruizlenato/youtube/v2 v2.0.0-20241207180344-3f95c0c6982d

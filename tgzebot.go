@@ -3,8 +3,8 @@
 https://pkg.go.dev/github.com/kkdai/youtube/v2/
 https://core.telegram.org/bots/api/
 
+
 go get github.com/kkdai/youtube/v2@master
-go get github.com/ruizlenato/youtube/v2@master
 
 GoGet
 GoFmt
