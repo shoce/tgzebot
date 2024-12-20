@@ -16,3 +16,5 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
+
+replace github.com/kkdai/youtube/v2 => github.com/ruizlenato/youtube/v2 v2.0.0-20241207180344-3f95c0c6982d
