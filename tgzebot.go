@@ -202,7 +202,7 @@ func init() {
 	}
 
 	if v, err := GetVar("TgUpdateLog"); err != nil {
-		log("ERROR GetVar TgUpdateLog: %w", err)
+		log("ERROR GetVar TgUpdateLog: %v", err)
 		os.Exit(1)
 	} else {
 		for _, s := range strings.Split(v, " ") {
@@ -276,7 +276,7 @@ func init() {
 	}
 
 	if v, err := GetVar("FfmpegPath"); err != nil {
-		log("ERROR %w", err)
+		log("ERROR %v", err)
 		os.Exit(1)
 	} else {
 		FfmpegPath = v
@@ -292,7 +292,7 @@ func init() {
 	}
 
 	if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
-		log("ERROR GetVar TgAllChannelsChatIds: %w", err)
+		log("ERROR GetVar TgAllChannelsChatIds: %v", err)
 		os.Exit(1)
 	} else {
 		for _, s := range strings.Split(v, " ") {
@@ -340,8 +340,8 @@ func ts() string {
 }
 
 func log(msg interface{}, args ...interface{}) {
-	msgtext := fmt.Sprintf("%s %s", ts(), msg) + NL
-	fmt.Fprintf(os.Stderr, msgtext, args...)
+	msgstring := fmt.Sprintf("%s %s", ts(), msg) + NL
+	fmt.Fprintf(os.Stderr, msgstring, args...)
 }
 
 type TgChatMessageId struct {
@@ -645,7 +645,7 @@ func GetVar(name string) (value string, err error) {
 
 	if YamlConfigPath != "" {
 		if v, err := YamlGet(name); err != nil {
-			log("WARNING GetVar YamlGet `%s`: %w", name, err)
+			log("WARNING GetVar YamlGet `%s`: %v", name, err)
 			return "", err
 		} else if v != "" {
 			value = v
@@ -654,7 +654,7 @@ func GetVar(name string) (value string, err error) {
 
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet `%s`: %w", name, err)
+			log("WARNING GetVar KvGet `%s`: %v", name, err)
 			return "", err
 		} else if v != "" {
 			value = v
@@ -1066,13 +1066,13 @@ func processTgUpdates() {
 			)
 			_, err = tgsendMessage(report, TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
-				log("tgsendMessage: %w", err)
+				log("tgsendMessage: %v", err)
 			}
 		} else {
 			log("WARNING unsupported type of update id:%d received:"+NL+"%s", u.UpdateId, respjson)
 			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
-				log("WARNING tgsendMessage: %w", err)
+				log("WARNING tgsendMessage: %v", err)
 				continue
 			}
 			continue
@@ -1098,14 +1098,14 @@ func processTgUpdates() {
 			for _, i := range TgAllChannelsChatIds {
 				ss = append(ss, fmt.Sprintf("%d", i))
 			}
-			s := strings.Join(ss, " ")
+			TgAllChannelsChatIdsString := strings.Join(ss, " ")
 
 			if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
-				log("ERROR GetVar TgAllChannelsChatIds: %w", err)
+				log("ERROR GetVar TgAllChannelsChatIds: %v", err)
 				continue
-			} else if v != s {
-				if err := SetVar("TgAllChannelsChatIds", s); err != nil {
-					log("WARNING SetVar TgAllChannelsChatIds: %w", err)
+			} else if v != TgAllChannelsChatIdsString {
+				if err := SetVar("TgAllChannelsChatIds", TgAllChannelsChatIdsString); err != nil {
+					log("WARNING SetVar TgAllChannelsChatIds: %v", err)
 				}
 			}
 		}
@@ -2080,7 +2080,7 @@ func FfmpegTranscode(filename, filename2 string, videoBitrateKbps, audioBitrateK
 
 	_, err = io.Copy(os.Stderr, ffmpegCmdStderrPipe)
 	if err != nil {
-		log("copy from ffmpeg stderr: %w", err)
+		log("copy from ffmpeg stderr: %v", err)
 	}
 
 	err = ffmpegCmd.Wait()
