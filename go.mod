@@ -3,7 +3,7 @@ module github.com/shoce/tgzebot
 go 1.23
 
 require (
-	github.com/kkdai/youtube/v2 v2.10.2-0.20241220143740-207c91bf7f4f
+	github.com/kkdai/youtube/v2 v2.10.2
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67
 	gopkg.in/yaml.v3 v3.0.1
 )

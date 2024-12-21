@@ -41,7 +41,8 @@ import (
 )
 
 const (
-	NL = "\n"
+	NL   = "\n"
+	SPAC = "    "
 
 	BEAT = time.Duration(24) * time.Hour / 1000
 
@@ -996,7 +997,7 @@ func processTgUpdates() {
 	var m, prevm TgMessage
 	for _, u := range uu {
 
-		log("#")
+		log("# UpdateId:%d ", u.UpdateId)
 
 		/*
 			if len(TgUpdateLog) > 0 && u.UpdateId < TgUpdateLog[len(TgUpdateLog)-1] {
@@ -1042,21 +1043,21 @@ func processTgUpdates() {
 			report := fmt.Sprintf(
 				"*MyChatMemberUpdated*"+NL+
 					"from:"+NL+
-					"  username: @%s"+NL+
-					"  id: `%d`"+NL+
+					SPAC+"username: @%s"+NL+
+					SPAC+"id: `%d`"+NL+
 					"chat:"+NL+
-					"  id: `%d`"+NL+
-					"  username: @%s"+NL+
-					"  type: %s"+NL+
-					"  title: %s"+NL+
+					SPAC+"id: `%d`"+NL+
+					SPAC+"username: @%s"+NL+
+					SPAC+"type: %s"+NL+
+					SPAC+"title: %s"+NL+
 					"old member:"+NL+
-					"  username: @%s"+NL+
-					"  id: `%d`"+NL+
-					"  status: %s"+NL+
+					SPAC+"username: @%s"+NL+
+					SPAC+"id: `%d`"+NL+
+					SPAC+"status: %s"+NL+
 					"new member:"+NL+
-					"  username: @%s"+NL+
-					"  id: `%d`"+NL+
-					"  status: %s"+NL+
+					SPAC+"username: @%s"+NL+
+					SPAC+"id: `%d`"+NL+
+					SPAC+"status: %s"+NL+
 					"",
 				cmu.From.Username, cmu.From.Id,
 				cmu.Chat.Id, cmu.Chat.Username, cmu.Chat.Type, tgescape(cmu.Chat.Title),
