@@ -9,6 +9,10 @@ ImageTagTgZeBot: ""
 
 YamlConfigPath: tgzebot.yaml
 
+EtcdEndpoint: ""
+EtcdRootPassword: ""
+EtcdKeyPrefix: ""
+
 KvToken: ""
 KvAccountId: ""
 KvNamespaceId: ""
