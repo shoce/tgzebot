@@ -45,7 +45,7 @@ const (
 
 	BEAT = time.Duration(24) * time.Hour / 1000
 
-	TgUpdateLogSize = 108
+	TgUpdateLogSize = 1080
 )
 
 var (
@@ -881,18 +881,13 @@ func tgescape(text string) string {
 }
 
 func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
+	var offset int64
+	if len(TgUpdateLog) > 0 {
+		offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
+	}
+	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TgApiUrlBase, TgToken, offset)
 
-	/*
-		var offset int64
-		if len(TgUpdateLog) > 0 {
-			offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
-		}
-		getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TgApiUrlBase, TgToken, offset)
-	*/
-
-	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates", TgApiUrlBase, TgToken)
 	var tgResp TgGetUpdatesResponse
-
 	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
 	if err != nil {
 		return nil, "", err
