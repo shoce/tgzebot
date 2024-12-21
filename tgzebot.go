@@ -352,9 +352,6 @@ func init() {
 			}
 		}
 	}
-
-	log("EXIT after init")
-	os.Exit(2)
 }
 
 func main() {
@@ -828,8 +825,8 @@ func YamlSet(key, value string) error {
 func EtcdGet(key string) (value string, err error) {
 	if resp, err := EtcdClient.Get(context.TODO(), EtcdKeyPrefix+key); err != nil {
 		return "", err
-	} else if len(resp.Kvs) != 1 {
-		return "", fmt.Errorf("number of kvs returned: %d", len(resp.Kvs))
+	} else if len(resp.Kvs) == 0 {
+		return "", nil
 	} else {
 		value = string(resp.Kvs[0].Value)
 	}
