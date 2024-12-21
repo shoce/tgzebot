@@ -36,6 +36,7 @@ import (
 	"unicode"
 
 	ytdl "github.com/kkdai/youtube/v2"
+	etcd "go.etcd.io/etcd/client/v3"
 	"golang.org/x/exp/slices"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -55,6 +56,13 @@ var (
 	Interval time.Duration
 
 	YamlConfigPath = "tgzebot.yaml"
+
+	EtcdEndpoint     string = "etcd:2379"
+	EtcdRootPassword string
+	EtcdKeyPrefix    string
+
+	// https://pkg.go.dev/go.etcd.io/etcd/client/v3
+	EtcdClient *etcd.Client
 
 	KvToken       string
 	KvAccountId   string
@@ -118,6 +126,44 @@ func init() {
 	}
 	if YamlConfigPath == "" {
 		log("WARNING YamlConfigPath empty")
+	}
+
+	EtcdEndpoint, err = GetVar("EtcdEndpoint")
+	if err != nil {
+		log("ERROR GetVar EtcdEndpoint: %v", err)
+		os.Exit(1)
+	} else if EtcdEndpoint == "" {
+		log("WARNING EtcdEndpoint empty")
+	}
+	log("DEBUG EtcdEndpoint:`%s`", EtcdEndpoint)
+
+	EtcdRootPassword, err = GetVar("EtcdRootPassword")
+	if err != nil {
+		log("ERROR GetVar EtcdRootPassword: %v", err)
+		os.Exit(1)
+	} else if EtcdRootPassword == "" {
+		log("WARNING EtcdRootPassword empty")
+	}
+	log("DEBUG EtcdRootPassword:`%s`", EtcdRootPassword)
+
+	EtcdKeyPrefix, err = GetVar("EtcdKeyPrefix")
+	if err != nil {
+		log("ERROR GetVar EtcdKeyPrefix: %v", err)
+		os.Exit(1)
+	} else if EtcdKeyPrefix == "" {
+		log("WARNING EtcdKeyPrefix empty")
+	}
+	log("DEBUG EtcdKeyPrefix:`%s`", EtcdKeyPrefix)
+
+	if EtcdEndpoint != "" && EtcdRootPassword != "" && EtcdKeyPrefix != "" {
+		EtcdClient, err = etcd.New(etcd.Config{
+			Endpoints:   []string{EtcdEndpoint},
+			DialTimeout: 3 * time.Second,
+		})
+		if err != nil {
+			log("ERROR etcd.New: %v", err)
+			os.Exit(1)
+		}
 	}
 
 	KvToken, _ = GetVar("KvToken")
@@ -304,6 +350,9 @@ func init() {
 			}
 		}
 	}
+
+	log("EXIT after init")
+	os.Exit(2)
 }
 
 func main() {
@@ -315,6 +364,10 @@ func main() {
 		log("sigterm received")
 		os.Exit(1)
 	}(sigterm)
+
+	if EtcdClient != nil {
+		defer EtcdClient.Close()
+	}
 
 	for {
 		t0 := time.Now()
@@ -652,9 +705,18 @@ func GetVar(name string) (value string, err error) {
 		}
 	}
 
+	if EtcdClient != nil {
+		if v, err := EtcdGet(name); err != nil {
+			log("WARNING GetVar EtcdGet %s: %v", name, err)
+			return "", err
+		} else if v != "" {
+			value = v
+		}
+	}
+
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
 		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet `%s`: %v", name, err)
+			log("WARNING GetVar KvGet %s: %v", name, err)
 			return "", err
 		} else if v != "" {
 			value = v
@@ -669,26 +731,34 @@ func SetVar(name, value string) (err error) {
 		log("DEBUG SetVar: %s: %s", name, value)
 	}
 
+	if EtcdClient != nil {
+		if err := EtcdSet(name, value); err != nil {
+			log("WARNING SetVar EtcdSet %s: %v", name, err)
+			return err
+		}
+		return nil
+	}
+
 	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
-		err = KvSet(name, value)
-		if err != nil {
+		if err := KvSet(name, value); err != nil {
+			log("WARNING SetVar KvSet %s: %v", name, err)
 			return err
 		}
 		return nil
 	}
 
 	if YamlConfigPath != "" {
-		err = YamlSet(name, value)
-		if err != nil {
+		if err := YamlSet(name, value); err != nil {
+			log("WARNING SetVar YamlSet %s: %v", name, err)
 			return err
 		}
 		return nil
 	}
 
-	return fmt.Errorf("not kv credentials nor yaml config path provided to save to")
+	return fmt.Errorf("nor etcd credentials nor kv credentials nor yaml config path provided to save to")
 }
 
-func YamlGet(name string) (value string, err error) {
+func YamlGet(key string) (value string, err error) {
 	configf, err := os.Open(YamlConfigPath)
 	if err != nil {
 		//log("WARNING os.Open config file %s: %v", YamlConfigPath, err)
@@ -705,7 +775,7 @@ func YamlGet(name string) (value string, err error) {
 		return "", err
 	}
 
-	if v, ok := configm[name]; ok == true {
+	if v, ok := configm[key]; ok == true {
 		switch v.(type) {
 		case string:
 			value = v.(string)
@@ -719,7 +789,7 @@ func YamlGet(name string) (value string, err error) {
 	return value, nil
 }
 
-func YamlSet(name, value string) error {
+func YamlSet(key, value string) error {
 	configf, err := os.Open(YamlConfigPath)
 	if err == nil {
 		configm := make(map[interface{}]interface{})
@@ -728,7 +798,7 @@ func YamlSet(name, value string) error {
 			log("WARNING yaml.Decode %s: %v", YamlConfigPath, err)
 		}
 		configf.Close()
-		configm[name] = value
+		configm[key] = value
 		configf, err := os.Create(YamlConfigPath)
 		if err == nil {
 			defer configf.Close()
@@ -753,10 +823,28 @@ func YamlSet(name, value string) error {
 	return nil
 }
 
-func KvGet(name string) (value string, err error) {
+func EtcdGet(key string) (value string, err error) {
+	if resp, err := EtcdClient.Get(context.TODO(), key); err != nil {
+		return "", err
+	} else if len(resp.Kvs) != 1 {
+		return "", fmt.Errorf("number of kvs returned: %d", len(resp.Kvs))
+	} else {
+		value = string(resp.Kvs[0].Value)
+	}
+	return value, nil
+}
+
+func EtcdSet(key, value string) error {
+	if _, err := EtcdClient.Put(context.TODO(), key, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+func KvGet(key string) (value string, err error) {
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, name),
+		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, key),
 		nil,
 	)
 	if err != nil {
@@ -781,7 +869,7 @@ func KvGet(name string) (value string, err error) {
 	return value, nil
 }
 
-func KvSet(name, value string) error {
+func KvSet(key, value string) error {
 	mpbb := new(bytes.Buffer)
 	mpw := multipart.NewWriter(mpbb)
 	if err := mpw.WriteField("metadata", "{}"); err != nil {
@@ -794,7 +882,7 @@ func KvSet(name, value string) error {
 
 	req, err := http.NewRequest(
 		"PUT",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, name),
+		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, key),
 		mpbb,
 	)
 	if err != nil {
