@@ -158,6 +158,8 @@ func init() {
 	if EtcdEndpoint != "" && EtcdRootPassword != "" && EtcdKeyPrefix != "" {
 		EtcdClient, err = etcd.New(etcd.Config{
 			Endpoints:   []string{EtcdEndpoint},
+			Username:    "root",
+			Password:    EtcdRootPassword,
 			DialTimeout: 3 * time.Second,
 		})
 		if err != nil {
@@ -824,7 +826,7 @@ func YamlSet(key, value string) error {
 }
 
 func EtcdGet(key string) (value string, err error) {
-	if resp, err := EtcdClient.Get(context.TODO(), key); err != nil {
+	if resp, err := EtcdClient.Get(context.TODO(), EtcdKeyPrefix+key); err != nil {
 		return "", err
 	} else if len(resp.Kvs) != 1 {
 		return "", fmt.Errorf("number of kvs returned: %d", len(resp.Kvs))
@@ -835,7 +837,7 @@ func EtcdGet(key string) (value string, err error) {
 }
 
 func EtcdSet(key, value string) error {
-	if _, err := EtcdClient.Put(context.TODO(), key, value); err != nil {
+	if _, err := EtcdClient.Put(context.TODO(), EtcdKeyPrefix+key, value); err != nil {
 		return err
 	}
 	return nil
