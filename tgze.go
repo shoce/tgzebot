@@ -58,7 +58,7 @@ var (
 
 	YamlConfigPath = "tgze.yaml"
 
-	EtcdEndpoint     string = "https://etcd:2379"
+	EtcdEndpoint     string = "etcd:2379"
 	EtcdRootPassword string
 	EtcdKeyPrefix    string
 
