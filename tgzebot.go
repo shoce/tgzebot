@@ -477,14 +477,14 @@ func beats(td time.Duration) int {
 func ts() string {
 	t := time.Now().Local()
 	return fmt.Sprintf(
-		"%03d."+"%02d%02d."+"%02d%02d",
+		"%03d:"+"%02d%02d:"+"%02d%02d",
 		t.Year()%1000, t.Month(), t.Day(), t.Hour(), t.Minute(),
 	)
 }
 
-func log(msg interface{}, args ...interface{}) {
-	msgstring := fmt.Sprintf("%s %s", ts(), msg) + NL
-	fmt.Fprintf(os.Stderr, msgstring, args...)
+func log(msg string, args ...interface{}) {
+	s := fmt.Sprintf("%s %s", ts(), msg) + NL
+	fmt.Fprintf(os.Stderr, s, args...)
 }
 
 type TgChatMessageId struct {
