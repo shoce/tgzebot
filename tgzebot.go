@@ -1555,9 +1555,17 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	)
 
 	var tgvideo *TgVideo
-	tgvideoCaption := fmt.Sprintf("%s %s"+NL+"youtu.be/%s %s %s", vinfo.Title, vinfo.PublishDate.Format("2006/01/02"), v.Id, vinfo.Duration, videoFormat.QualityLabel)
+	tgvideoCaption := fmt.Sprintf(
+		"%s %s"+NL+
+			"youtu.be/%s %s %s ",
+		vinfo.Title, vinfo.PublishDate.Format("2006/01/02"),
+		v.Id, vinfo.Duration, videoFormat.QualityLabel,
+	)
 	if v.PlaylistId != "" && v.PlaylistTitle != "" {
-		tgvideoCaption = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + tgvideoCaption
+		tgvideoCaption += NL + fmt.Sprintf(
+			"%d/%d %s ",
+			v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle,
+		)
 	}
 
 	tgvideoFilename := fmt.Sprintf("%s.%s.mp4", ts(), v.Id)
@@ -1714,9 +1722,17 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	)
 
 	var tgaudio *TgAudio
-	tgaudioCaption := fmt.Sprintf("%s %s"+NL+"youtu.be/%s %s %dkbps", vinfo.Title, vinfo.PublishDate.Format("2006/01/02"), v.Id, vinfo.Duration, audioFormat.Bitrate/1024)
+	tgaudioCaption := fmt.Sprintf(
+		"%s %s "+NL+
+			"youtu.be/%s %s %dkbps ",
+		vinfo.Title, vinfo.PublishDate.Format("2006/01/02"),
+		v.Id, vinfo.Duration, audioFormat.Bitrate/1024,
+	)
 	if v.PlaylistId != "" && v.PlaylistTitle != "" {
-		tgaudioCaption = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + tgaudioCaption
+		tgaudioCaption += NL + fmt.Sprintf(
+			"%d/%d %s ",
+			v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle,
+		)
 	}
 
 	tgaudioFilename := fmt.Sprintf("%s.%s.m4a", ts(), v.Id)
