@@ -1,4 +1,4 @@
-module github.com/shoce/tgzebot
+module github.com/shoce/tgze
 
 go 1.23
 

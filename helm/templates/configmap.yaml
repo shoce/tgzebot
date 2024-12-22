@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: tgzebot
+  name: tgze
 
 data:
 

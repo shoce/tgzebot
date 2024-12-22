@@ -16,13 +16,13 @@ FROM golang:1.23.4 AS build
 #RUN ls -l -a
 #RUN ./ffmpeg -version
 
-RUN mkdir -p /root/tgzebot/
-WORKDIR /root/tgzebot/
+RUN mkdir -p /root/tgze/
+WORKDIR /root/tgze/
 
-COPY tgzebot.go go.mod go.sum /root/tgzebot/
+COPY tgze.go go.mod go.sum /root/tgze/
 RUN go version
 RUN go get -v
-RUN go build -o tgzebot tgzebot.go
+RUN go build -o tgze tgze.go
 RUN ls -l -a
 
 
@@ -33,9 +33,9 @@ RUN apk add --no-cache tzdata
 RUN apk add --no-cache gcompat && ln -s -f -v ld-linux-x86-64.so.2 /lib/libresolv.so.2
 
 #COPY --from=build /root/ffmpeg/ffmpeg /bin/
-COPY --from=build /root/tgzebot/tgzebot /bin/
+COPY --from=build /root/tgze/tgze /bin/
 
 WORKDIR /root/
-ENTRYPOINT ["/bin/tgzebot"]
+ENTRYPOINT ["/bin/tgze"]
 
 

@@ -2,24 +2,24 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: tgzebot
+  name: tgze
   labels:
-    app: tgzebot
+    app: tgze
 spec:
   selector:
     matchLabels:
-      app: tgzebot
+      app: tgze
   template:
     metadata:
-      name: tgzebot
+      name: tgze
       labels:
-        app: tgzebot
+        app: tgze
     spec:
       containers:
-        - name: tgzebot
+        - name: tgze
           imagePullPolicy: IfNotPresent
-          image: "{{ $.Values.ImageNameTgZeBot }}:{{ $.Values.ImageTagTgZeBot }}"
+          image: "{{ $.Values.ImageNameTgZe }}:{{ $.Values.ImageTagTgZe }}"
           envFrom:
             - configMapRef:
-                name: tgzebot
+                name: tgze
 

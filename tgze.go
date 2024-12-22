@@ -55,7 +55,7 @@ var (
 
 	Interval time.Duration
 
-	YamlConfigPath = "tgzebot.yaml"
+	YamlConfigPath = "tgze.yaml"
 
 	EtcdEndpoint     string = "etcd:2379"
 	EtcdRootPassword string
@@ -1471,6 +1471,7 @@ func processTgUpdates() {
 
 			if postingerr == nil {
 				if ischannelpost {
+					// TODO do not delete if playlist
 					err = tgdeleteMessage(m.Chat.Id, m.MessageId)
 					if err != nil {
 						log("tgdeleteMessage: %v", err)

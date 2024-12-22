@@ -4,10 +4,10 @@ DEBUG: false
 
 Interval: 1m11s
 
-ImageNameTgZeBot: ghcr.io/shoce/tgzebot
-ImageTagTgZeBot: ""
+ImageNameTgZe: ghcr.io/shoce/tgzebot
+ImageTagTgZe: ""
 
-YamlConfigPath: tgzebot.yaml
+YamlConfigPath: tgze.yaml
 
 EtcdEndpoint: ""
 EtcdRootPassword: ""
