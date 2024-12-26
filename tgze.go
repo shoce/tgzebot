@@ -152,7 +152,7 @@ func init() {
 	} else if v == "true" {
 		EtcdTls = true
 	}
-	log("DEBUG EtcdTls:%s", EtcdTls)
+	log("DEBUG EtcdTls:%v", EtcdTls)
 
 	EtcdRootPassword, err = GetVar("EtcdRootPassword")
 	if err != nil {
