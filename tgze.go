@@ -188,6 +188,7 @@ func init() {
 			log("ERROR etcd.New: %v", err)
 			os.Exit(1)
 		}
+		log("DEBUG EtcdClient:%+v", EtcdClient)
 	}
 
 	KvToken, err = GetVar("KvToken")
