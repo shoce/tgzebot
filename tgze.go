@@ -59,10 +59,18 @@ var (
 	YamlConfigPath = "tgze.yaml"
 
 	EtcdEndpoint     string = "etcd:2379"
+	EtcdTls          bool
 	EtcdRootPassword string
 	EtcdKeyPrefix    string
 
-	// https://pkg.go.dev/go.etcd.io/etcd/client/v3
+	// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
+	EtcdConfig = etcd.Config{
+		DialTimeout: 3 * time.Second,
+		// https://pkg.go.dev/go.uber.org/zap#NewNop
+		Logger: nil,
+	}
+
+	// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Client
 	EtcdClient *etcd.Client
 
 	KvToken       string
@@ -138,6 +146,14 @@ func init() {
 	}
 	log("DEBUG EtcdEndpoint:`%s`", EtcdEndpoint)
 
+	if v, err := GetVar("EtcdTls"); err != nil {
+		log("ERROR GetVar EtcdTls: %v", err)
+		os.Exit(1)
+	} else if v == "true" {
+		EtcdTls = true
+	}
+	log("DEBUG EtcdTls:%s", EtcdTls)
+
 	EtcdRootPassword, err = GetVar("EtcdRootPassword")
 	if err != nil {
 		log("ERROR GetVar EtcdRootPassword: %v", err)
@@ -156,15 +172,18 @@ func init() {
 	}
 	log("DEBUG EtcdKeyPrefix:`%s`", EtcdKeyPrefix)
 
-	if EtcdEndpoint != "" && EtcdRootPassword != "" && EtcdKeyPrefix != "" {
+	if EtcdEndpoint != "" {
 		// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
-		EtcdClient, err = etcd.New(etcd.Config{
-			Endpoints:   []string{EtcdEndpoint},
-			Username:    "root",
-			Password:    EtcdRootPassword,
-			DialTimeout: 3 * time.Second,
-			TLS:         &tls.Config{InsecureSkipVerify: true},
-		})
+		EtcdConfig.Endpoints = []string{EtcdEndpoint}
+		if EtcdRootPassword != "" {
+			EtcdConfig.Username = "root"
+			EtcdConfig.Password = EtcdRootPassword
+		}
+		if EtcdTls {
+			EtcdConfig.TLS = &tls.Config{InsecureSkipVerify: true}
+		}
+		// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
+		EtcdClient, err = etcd.New(EtcdConfig)
 		if err != nil {
 			log("ERROR etcd.New: %v", err)
 			os.Exit(1)

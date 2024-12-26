@@ -13,6 +13,7 @@ data:
   YamlConfigPath: "{{ $.Values.YamlConfigPath }}"
 
   EtcdEndpoint: "{{ $.Values.EtcdEndpoint }}"
+  EtcdTls: "{{ $.Values.EtcdTls }}"
   EtcdRootPassword: "{{ $.Values.EtcdRootPassword }}"
   EtcdKeyPrefix: "{{ $.Values.EtcdKeyPrefix }}"
 

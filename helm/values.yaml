@@ -10,6 +10,7 @@ ImageTagTgZe: ""
 YamlConfigPath: tgze.yaml
 
 EtcdEndpoint: ""
+EtcdTls: false
 EtcdRootPassword: ""
 EtcdKeyPrefix: ""
 
