@@ -58,10 +58,10 @@ var (
 
 	YamlConfigPath = "tgze.yaml"
 
-	EtcdEndpoint     string = "etcd:2379"
-	EtcdTls          bool
-	EtcdRootPassword string
-	EtcdKeyPrefix    string
+	EtcdEndpoint      string = "etcd:2379"
+	EtcdTlsSkipVerify bool
+	EtcdRootPassword  string
+	EtcdKeyPrefix     string
 
 	// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
 	EtcdConfig = etcd.Config{
@@ -146,13 +146,13 @@ func init() {
 	}
 	log("DEBUG EtcdEndpoint:`%s`", EtcdEndpoint)
 
-	if v, err := GetVar("EtcdTls"); err != nil {
-		log("ERROR GetVar EtcdTls: %v", err)
+	if v, err := GetVar("EtcdTlsSkipVerify"); err != nil {
+		log("ERROR GetVar EtcdTlsSkipVerify: %v", err)
 		os.Exit(1)
 	} else if v == "true" {
-		EtcdTls = true
+		EtcdTlsSkipVerify = true
 	}
-	log("DEBUG EtcdTls:%v", EtcdTls)
+	log("DEBUG EtcdTlsSkipVerify:%v", EtcdTlsSkipVerify)
 
 	EtcdRootPassword, err = GetVar("EtcdRootPassword")
 	if err != nil {
@@ -179,7 +179,7 @@ func init() {
 			EtcdConfig.Username = "root"
 			EtcdConfig.Password = EtcdRootPassword
 		}
-		if EtcdTls {
+		if EtcdTlsSkipVerify {
 			EtcdConfig.TLS = &tls.Config{InsecureSkipVerify: true}
 		}
 		// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
