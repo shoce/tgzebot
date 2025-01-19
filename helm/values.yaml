@@ -1,24 +1,7 @@
 ---
 
-DEBUG: false
-
-Interval: 1m11s
-
 ImageNameTgZe: ghcr.io/shoce/tgzebot
 ImageTagTgZe: ""
 
-YamlConfigPath: tgze.yaml
-
-EtcdEndpoint: ""
-EtcdTls: false
-EtcdRootPassword: ""
-EtcdKeyPrefix: ""
-
-KvToken: ""
-KvAccountId: ""
-KvNamespaceId: ""
-
-TgToken: ""
-TgZeChatId: ""
-
+YssUrl: "https://yss/tgze"
 

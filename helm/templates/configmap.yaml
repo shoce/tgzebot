@@ -6,22 +6,6 @@ metadata:
 
 data:
 
-  DEBUG: "{{ $.Values.DEBUG }}"
-
-  Interval: "{{ $.Values.Interval }}"
-
-  YamlConfigPath: "{{ $.Values.YamlConfigPath }}"
-
-  EtcdEndpoint: "{{ $.Values.EtcdEndpoint }}"
-  EtcdTls: "{{ $.Values.EtcdTls }}"
-  EtcdRootPassword: "{{ $.Values.EtcdRootPassword }}"
-  EtcdKeyPrefix: "{{ $.Values.EtcdKeyPrefix }}"
-
-  KvToken: "{{ $.Values.KvToken }}"
-  KvAccountId: "{{ $.Values.KvAccountId }}"
-  KvNamespaceId: "{{ $.Values.KvNamespaceId }}"
-
-  TgToken: "{{ $.Values.TgToken }}"
-  TgZeChatId: "{{ $.Values.TgZeChatId }}"
+  YssUrl: "{{ $.Values.YssUrl }}"
 
 
