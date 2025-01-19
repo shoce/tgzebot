@@ -17,14 +17,11 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -37,7 +34,6 @@ import (
 	"unicode"
 
 	ytdl "github.com/kkdai/youtube/v2"
-	etcd "go.etcd.io/etcd/client/v3"
 	"golang.org/x/exp/slices"
 	yaml "gopkg.in/yaml.v3"
 )
@@ -47,425 +43,130 @@ const (
 	SPAC = "    "
 
 	BEAT = time.Duration(24) * time.Hour / 1000
-
-	TgUpdateLogSize = 1080
 )
 
-var (
-	DEBUG bool
+type TgZeConfig struct {
+	YssUrl string `yaml:"-"`
 
-	Interval time.Duration
+	DEBUG bool `yaml:"DEBUG"`
 
-	YamlConfigPath = "tgze.yaml"
+	Interval time.Duration `yaml:"Interval"`
 
-	EtcdEndpoint      string = "etcd:2379"
-	EtcdTlsSkipVerify bool
-	EtcdRootPassword  string
-	EtcdKeyPrefix     string
+	TgApiUrlBase string `yaml:"TgApiUrlBase"` // = "https://api.telegram.org"
 
-	// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
-	EtcdConfig = etcd.Config{
-		DialTimeout: 3 * time.Second,
-		// https://pkg.go.dev/go.uber.org/zap#NewNop
-		Logger: nil,
-	}
+	TgToken            string  `yaml:"TgToken"`
+	TgZeChatId         int64   `yaml:"TgZeChatId"`
+	TgUpdateLog        []int64 `yaml:"TgUpdateLog,flow"`
+	TgUpdateLogMaxSize int     `yaml:"TgUpdateLogMaxSize"` // = 1080
 
-	// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Client
-	EtcdClient *etcd.Client
+	TgCommandChannels             string `yaml:"TgCommandChannels"`
+	TgCommandChannelsPromoteAdmin string `yaml:"TgCommandChannelsPromoteAdmin"`
 
-	KvToken       string
-	KvAccountId   string
-	KvNamespaceId string
+	TgQuest1    string `yaml:"TgQuest1"`
+	TgQuest1Key string `yaml:"TgQuest1Key"`
+	TgQuest2    string `yaml:"TgQuest2"`
+	TgQuest2Key string `yaml:"TgQuest2Key"`
+	TgQuest3    string `yaml:"TgQuest3"`
+	TgQuest3Key string `yaml:"TgQuest3Key"`
 
-	Ctx context.Context
+	TgAllChannelsChatIds []int64 `yaml:"TgAllChannelsChatIds,flow"`
 
-	HttpClient = &http.Client{}
+	TgMaxFileSizeBytes int64 `yaml:"TgMaxFileSizeBytes"` // = 47 << 20
+	TgAudioBitrateKbps int64 `yaml:"TgAudioBitrateKbps"` // = 60
 
-	YtHttpClient = &http.Client{}
-	YtCl         ytdl.Client
+	FfmpegPath          string   `yaml:"FfmpegPath"` // = "/bin/ffmpeg"
+	FfmpegGlobalOptions []string `yaml:"FfmpegGlobalOptions"`
 
-	ytRe, ytlistRe *regexp.Regexp
+	YtKey        string `yaml:"YtKey"`
+	YtMaxResults int64  `yaml:"YtMaxResults"` // = 50
 
-	YtMaxResults int64 = 50
-	YtKey        string
-
-	YtHttpClientUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15"
+	YtHttpClientUserAgent string `yaml:"YtHttpClientUserAgent"` // = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.2 Safari/605.1.15"
 
 	// https://golang.org/s/re2syntax
 	// (?:re)	non-capturing group
 	// TODO add support for https://www.youtube.com/watch?&list=PL5Qevr-CpW_yZZjYspehnFc-QRKQMCKHB&v=1nzx7O7ndfI&index=34
-	YtReString     = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
-	YtListReString = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
+	YtRe     string `yaml:"YtRe"`     // = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
+	YtListRe string `yaml:"YtListRe"` // = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
 
-	TgApiUrlBase string = "https://api.telegram.org"
+	YtDownloadLanguages []string `yaml:"YtDownloadLanguages"`
+}
 
-	TgToken     string
-	TgUpdateLog []int64
-	TgZeChatId  int64
+var (
+	Ctx context.Context
 
-	TgMaxFileSizeBytes int64 = 47 << 20
-	TgAudioBitrateKbps int64 = 60
+	HttpClient = &http.Client{}
 
-	DownloadLanguages []string
+	Config TgZeConfig
 
-	FfmpegPath          string = "/bin/ffmpeg"
-	FfmpegGlobalOptions []string
-
-	TgCommandChannels             string
-	TgCommandChannelsPromoteAdmin string
-
-	TgQuest1    string
-	TgQuest1Key string
-	TgQuest2    string
-	TgQuest2Key string
-	TgQuest3    string
-	TgQuest3Key string
-
-	TgAllChannelsChatIds []int64
+	YtCl           ytdl.Client
+	YtRe, YtListRe *regexp.Regexp
 )
 
 func init() {
-	var err error
-
-	ytRe = regexp.MustCompile(YtReString)
-	ytlistRe = regexp.MustCompile(YtListReString)
-
-	if v := os.Getenv("YamlConfigPath"); v != "" {
-		YamlConfigPath = v
-	}
-	if YamlConfigPath == "" {
-		log("WARNING YamlConfigPath empty")
-	}
-
-	EtcdEndpoint, err = GetVar("EtcdEndpoint")
-	if err != nil {
-		log("ERROR GetVar EtcdEndpoint: %v", err)
-		os.Exit(1)
-	} else if EtcdEndpoint == "" {
-		log("WARNING EtcdEndpoint empty")
-	}
-	log("DEBUG EtcdEndpoint:`%s`", EtcdEndpoint)
-
-	if v, err := GetVar("EtcdTlsSkipVerify"); err != nil {
-		log("ERROR GetVar EtcdTlsSkipVerify: %v", err)
-		os.Exit(1)
-	} else if v == "true" {
-		EtcdTlsSkipVerify = true
-	}
-	log("DEBUG EtcdTlsSkipVerify:%v", EtcdTlsSkipVerify)
-
-	EtcdRootPassword, err = GetVar("EtcdRootPassword")
-	if err != nil {
-		log("ERROR GetVar EtcdRootPassword: %v", err)
-		os.Exit(1)
-	} else if EtcdRootPassword == "" {
-		log("WARNING EtcdRootPassword empty")
-	}
-	log("DEBUG EtcdRootPassword:`%s`", EtcdRootPassword)
-
-	EtcdKeyPrefix, err = GetVar("EtcdKeyPrefix")
-	if err != nil {
-		log("ERROR GetVar EtcdKeyPrefix: %v", err)
-		os.Exit(1)
-	} else if EtcdKeyPrefix == "" {
-		log("WARNING EtcdKeyPrefix empty")
-	}
-	log("DEBUG EtcdKeyPrefix:`%s`", EtcdKeyPrefix)
-
-	if EtcdEndpoint != "" {
-		// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
-		EtcdConfig.Endpoints = []string{EtcdEndpoint}
-		if EtcdRootPassword != "" {
-			EtcdConfig.Username = "root"
-			EtcdConfig.Password = EtcdRootPassword
-		}
-		if EtcdTlsSkipVerify {
-			EtcdConfig.TLS = &tls.Config{InsecureSkipVerify: true}
-		}
-		// https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config
-		EtcdClient, err = etcd.New(EtcdConfig)
-		if err != nil {
-			log("ERROR etcd.New: %v", err)
-			os.Exit(1)
-		}
-		log("DEBUG EtcdClient:%+v", EtcdClient)
-	}
-
-	KvToken, err = GetVar("KvToken")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if KvToken == "" {
-		log("WARNING KvToken empty")
-	}
-
-	KvAccountId, err = GetVar("KvAccountId")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if KvAccountId == "" {
-		log("WARNING KvAccountId empty")
-	}
-
-	KvNamespaceId, err = GetVar("KvNamespaceId")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if KvNamespaceId == "" {
-		log("WARNING KvNamespaceId empty")
-	}
-
-	if v, err := GetVar("TgApiUrlBase"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		TgApiUrlBase = v
-		log("TgApiUrlBase:`%s`", TgApiUrlBase)
-	}
-
-	if s, err := GetVar("TgMaxFileSizeBytes"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if s != "" {
-		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
-			TgMaxFileSizeBytes = v
-			log("TgMaxFileSizeBytes:%v", TgMaxFileSizeBytes)
-		} else {
-			log("WARNING invalid TgMaxFileSizeBytes:`%s`", s)
-		}
-	}
-
-	if s, err := GetVar("TgAudioBitrateKbps"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if s != "" {
-		if v, err := strconv.ParseInt(s, 10, 64); err == nil {
-			TgAudioBitrateKbps = v
-			log("TgAudioBitrateKbps:%v", TgAudioBitrateKbps)
-		} else {
-			log("WARNING invalid TgAudioBitrateKbps:`%s`", s)
-		}
-	}
-
 	Ctx = context.TODO()
 
-	YtProxy := http.ProxyFromEnvironment
-	if v, err := GetVar("YtProxyList"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		pp := strings.Split(v, " ")
-		rand.Seed(time.Now().UnixNano())
-		if err := SetVar("YtProxy", pp[rand.Intn(len(pp))]); err != nil {
-			log("WARNING SetVar YtProxy: %v", err)
-		}
+	if v := os.Getenv("YssUrl"); v != "" {
+		Config.YssUrl = v
 	}
-	if v, err := GetVar("YtProxy"); err != nil {
-		log("ERROR GetVar: %v", err)
+	if Config.YssUrl == "" {
+		log("ERROR YssUrl empty")
 		os.Exit(1)
-	} else if v != "" {
-		if !strings.HasPrefix(v, "https://") {
-			v = "https://" + v
-		}
-		log("YtProxy: %s", v)
-		if url, err := url.Parse(v); err == nil {
-			YtProxy = http.ProxyURL(url)
-		}
 	}
 
-	var proxyTransport http.RoundTripper = http.DefaultTransport
-	proxyTransport.(*http.Transport).Proxy = YtProxy
-	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, YtHttpClientUserAgent}}}
-
-	if s, err := GetVar("Interval"); err != nil {
-		log("ERROR GetVar: %v", err)
+	if err := Config.Get(); err != nil {
+		log("ERROR Config.Get: %v", err)
 		os.Exit(1)
-	} else if s != "" {
-		Interval, err = time.ParseDuration(s)
-		if err != nil {
-			log("ERROR time.ParseDuration Interval:`%s`: %v", s, err)
-			os.Exit(1)
-		}
-		log("Interval: %v", Interval)
-	} else {
+	}
+
+	if Config.DEBUG {
+		log("DEBUG==true")
+	}
+
+	log("Interval==%v", Config.Interval)
+	if Config.Interval == 0 {
 		log("ERROR Interval empty")
 		os.Exit(1)
 	}
 
-	if v, err := GetVar("TgToken"); err != nil {
-		log("ERROR GetVar: %v", err)
+	var err error
+	YtRe, err = regexp.Compile(Config.YtRe)
+	if err != nil {
+		log("ERROR Compile YtRe `%s`: %s", Config.YtRe, err)
 		os.Exit(1)
-	} else {
-		TgToken = v
 	}
-	if TgToken == "" {
+	YtListRe, err = regexp.Compile(Config.YtListRe)
+	if err != nil {
+		log("ERROR Compile YtListRe `%s`: %s", Config.YtListRe, err)
+		os.Exit(1)
+	}
+
+	var proxyTransport http.RoundTripper = http.DefaultTransport
+	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, Config.YtHttpClientUserAgent}}}
+
+	if Config.TgToken == "" {
 		log("ERROR TgToken empty")
 		os.Exit(1)
 	}
 
-	if v, err := GetVar("TgUpdateLog"); err != nil {
-		log("ERROR GetVar TgUpdateLog: %v", err)
-		os.Exit(1)
-	} else {
-		for _, s := range strings.Split(v, " ") {
-			if s == "" {
-				continue
-			}
-			if i, err := strconv.ParseInt(s, 10, 0); err != nil {
-				log("WARNING %v", err)
-				continue
-			} else {
-				TgUpdateLog = append(TgUpdateLog, i)
-			}
-		}
-	}
-	log("DEBUG TgUpdateLog: %+v", TgUpdateLog)
+	log("TgUpdateLog==%+v", Config.TgUpdateLog)
 
-	if v, err := GetVar("TgZeChatId"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v == "" {
-		log("ERROR TgZeChatId empty")
-		os.Exit(1)
-	} else {
-		TgZeChatId, err = strconv.ParseInt(v, 10, 0)
-		if err != nil {
-			log("ERROR invalid TgZeChatId: %v", err)
-			os.Exit(1)
-		}
-	}
-
-	TgCommandChannels, err = GetVar("TgCommandChannels")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if TgCommandChannels == "" {
+	if Config.TgCommandChannels == "" {
 		log("ERROR TgCommandChannels empty")
 		os.Exit(1)
 	}
 
-	TgCommandChannelsPromoteAdmin, err = GetVar("TgCommandChannelsPromoteAdmin")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if TgCommandChannelsPromoteAdmin == "" {
+	if Config.TgCommandChannelsPromoteAdmin == "" {
 		log("ERROR TgCommandChannelsPromoteAdmin empty")
 		os.Exit(1)
 	}
 
-	TgQuest1, err = GetVar("TgQuest1")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	TgQuest1Key, err = GetVar("TgQuest1Key")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-
-	TgQuest2, err = GetVar("TgQuest2")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	TgQuest2Key, err = GetVar("TgQuest2Key")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-
-	TgQuest3, err = GetVar("TgQuest3")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	TgQuest3Key, err = GetVar("TgQuest3Key")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-
-	YtKey, err = GetVar("YtKey")
-	if err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	}
-	if YtKey == "" {
+	if Config.YtKey == "" {
 		log("ERROR YtKey empty")
 		os.Exit(1)
 	}
 
-	if v, err := GetVar("YtMaxResults"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		YtMaxResults, err = strconv.ParseInt(v, 10, 0)
-		if err != nil {
-			log("ERROR invalid YtMaxResults: %v", err)
-			os.Exit(1)
-		}
-	}
-
-	if v, err := GetVar("YtHttpClientUserAgent"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		YtHttpClientUserAgent = v
-	}
-	if v, err := GetVar("YtReString"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		YtReString = v
-	}
-	if v, err := GetVar("YtListReString"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		YtListReString = v
-	}
-
-	if v, err := GetVar("FfmpegPath"); err != nil {
-		log("ERROR %v", err)
-		os.Exit(1)
-	} else {
-		FfmpegPath = v
-	}
-	log("FfmpegPath:`%s`", FfmpegPath)
-
-	if v, err := GetVar("FfmpegGlobalOptions"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		FfmpegGlobalOptions = strings.Split(v, " ")
-	}
-
-	if v, err := GetVar("DownloadLanguages"); err != nil {
-		log("ERROR GetVar: %v", err)
-		os.Exit(1)
-	} else if v != "" {
-		DownloadLanguages = strings.Split(v, " ")
-	}
-
-	if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
-		log("ERROR GetVar TgAllChannelsChatIds: %v", err)
-		os.Exit(1)
-	} else {
-		for _, s := range strings.Split(v, " ") {
-			if i, err := strconv.ParseInt(s, 10, 0); err != nil {
-				log("WARNING invalid TgAllChannelsChatIds: %v", err)
-				continue
-			} else {
-				TgAllChannelsChatIds = append(TgAllChannelsChatIds, i)
-			}
-		}
-	}
+	log("FfmpegPath==`%s`", Config.FfmpegPath)
+	log("FfmpegGlobalOptions==%+v", Config.FfmpegGlobalOptions)
 }
 
 func main() {
@@ -473,20 +174,16 @@ func main() {
 	signal.Notify(sigterm, syscall.SIGTERM)
 	go func(sigterm chan os.Signal) {
 		<-sigterm
-		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), TgZeChatId, "", 0)
+		tgsendMessage(fmt.Sprintf("%s: sigterm", os.Args[0]), Config.TgZeChatId, "", 0)
 		log("sigterm received")
 		os.Exit(1)
 	}(sigterm)
 
-	if EtcdClient != nil {
-		defer EtcdClient.Close()
-	}
-
 	for {
 		t0 := time.Now()
 		processTgUpdates()
-		if dur := time.Now().Sub(t0); dur < Interval {
-			time.Sleep(Interval - dur)
+		if dur := time.Now().Sub(t0); dur < Config.Interval {
+			time.Sleep(Config.Interval - dur)
 		}
 	}
 
@@ -767,7 +464,7 @@ func getJson(url string, target interface{}, respjson *string) (err error) {
 		return fmt.Errorf("json.Decoder.Decode: %w", err)
 	}
 
-	if DEBUG {
+	if Config.DEBUG {
 		log("DEBUG getJson %s response ContentLength:%d Body:"+NL+"%s", url, resp.ContentLength, respBody)
 	}
 	if respjson != nil {
@@ -802,262 +499,6 @@ func postJson(url string, data *bytes.Buffer, target interface{}) error {
 	return nil
 }
 
-func GetVar(name string) (value string, err error) {
-	if DEBUG {
-		log("DEBUG GetVar `%s`", name)
-	}
-
-	value = os.Getenv(name)
-
-	if YamlConfigPath != "" {
-		if v, err := YamlGet(name); err != nil {
-			log("WARNING GetVar YamlGet `%s`: %v", name, err)
-			return "", err
-		} else if v != "" {
-			value = v
-		}
-	}
-
-	if EtcdClient != nil {
-		if v, err := EtcdGet(name); err != nil {
-			log("WARNING GetVar EtcdGet %s: %v", name, err)
-			return "", err
-		} else if v != "" {
-			value = v
-		}
-	}
-
-	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
-		if v, err := KvGet(name); err != nil {
-			log("WARNING GetVar KvGet %s: %v", name, err)
-			return "", err
-		} else if v != "" {
-			value = v
-		}
-	}
-
-	return value, nil
-}
-
-func SetVar(name, value string) (err error) {
-	if DEBUG {
-		log("DEBUG SetVar: %s: %s", name, value)
-	}
-
-	if EtcdClient != nil {
-		if err := EtcdSet(name, value); err != nil {
-			log("WARNING SetVar EtcdSet %s: %v", name, err)
-			return err
-		}
-		return nil
-	}
-
-	if KvToken != "" && KvAccountId != "" && KvNamespaceId != "" {
-		if err := KvSet(name, value); err != nil {
-			log("WARNING SetVar KvSet %s: %v", name, err)
-			return err
-		}
-		return nil
-	}
-
-	if YamlConfigPath != "" {
-		if err := YamlSet(name, value); err != nil {
-			log("WARNING SetVar YamlSet %s: %v", name, err)
-			return err
-		}
-		return nil
-	}
-
-	return fmt.Errorf("nor etcd credentials nor kv credentials nor yaml config path provided to save to")
-}
-
-func YamlGet(key string) (value string, err error) {
-	configf, err := os.Open(YamlConfigPath)
-	if err != nil {
-		//log("WARNING os.Open config file %s: %v", YamlConfigPath, err)
-		if os.IsNotExist(err) {
-			return "", nil
-		}
-		return "", err
-	}
-	defer configf.Close()
-
-	configm := make(map[interface{}]interface{})
-	if err = yaml.NewDecoder(configf).Decode(&configm); err != nil {
-		//log("WARNING yaml.Decode %s: %v", YamlConfigPath, err)
-		return "", err
-	}
-
-	if v, ok := configm[key]; ok == true {
-		switch v.(type) {
-		case string:
-			value = v.(string)
-		case int:
-			value = fmt.Sprintf("%d", v.(int))
-		default:
-			return "", fmt.Errorf("yaml value of unsupported type, only string and int types are supported")
-		}
-	}
-
-	return value, nil
-}
-
-func YamlSet(key, value string) error {
-	configf, err := os.Open(YamlConfigPath)
-	if err == nil {
-		configm := make(map[interface{}]interface{})
-		err := yaml.NewDecoder(configf).Decode(&configm)
-		if err != nil {
-			log("WARNING yaml.Decode %s: %v", YamlConfigPath, err)
-		}
-		configf.Close()
-		configm[key] = value
-		configf, err := os.Create(YamlConfigPath)
-		if err == nil {
-			defer configf.Close()
-			confige := yaml.NewEncoder(configf)
-			err := confige.Encode(configm)
-			if err == nil {
-				confige.Close()
-				configf.Close()
-			} else {
-				log("WARNING yaml.Encoder.Encode: %v", err)
-				return err
-			}
-		} else {
-			log("WARNING os.Create config file %s: %v", YamlConfigPath, err)
-			return err
-		}
-	} else {
-		log("WARNING os.Open config file %s: %v", YamlConfigPath, err)
-		return err
-	}
-
-	return nil
-}
-
-func EtcdGet(key string) (value string, err error) {
-	if resp, err := EtcdClient.Get(context.TODO(), EtcdKeyPrefix+key); err != nil {
-		return "", err
-	} else if len(resp.Kvs) == 0 {
-		return "", nil
-	} else {
-		value = string(resp.Kvs[0].Value)
-	}
-	return value, nil
-}
-
-func EtcdSet(key, value string) error {
-	if _, err := EtcdClient.Put(context.TODO(), EtcdKeyPrefix+key, value); err != nil {
-		return err
-	}
-	return nil
-}
-
-func KvGet(key string) (value string, err error) {
-	req, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, key),
-		nil,
-	)
-	if err != nil {
-		return "", err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", KvToken))
-	resp, err := HttpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("kv api response status: %s", resp.Status)
-	}
-
-	if rbb, err := io.ReadAll(resp.Body); err != nil {
-		return "", err
-	} else {
-		value = string(rbb)
-	}
-
-	return value, nil
-}
-
-func KvSet(key, value string) error {
-	mpbb := new(bytes.Buffer)
-	mpw := multipart.NewWriter(mpbb)
-	if err := mpw.WriteField("metadata", "{}"); err != nil {
-		return err
-	}
-	if err := mpw.WriteField("value", value); err != nil {
-		return err
-	}
-	mpw.Close()
-
-	req, err := http.NewRequest(
-		"PUT",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/values/%s", KvAccountId, KvNamespaceId, key),
-		mpbb,
-	)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", mpw.FormDataContentType())
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", KvToken))
-	resp, err := HttpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("kv api response status: %s", resp.Status)
-	}
-
-	return nil
-}
-
-type KvKeysResponse struct {
-	Result []struct {
-		Name     string            `json:"name"`
-		Metadata map[string]string `json:"metadata"`
-	} `json:"result"`
-	Success    bool     `json:"success"`
-	Errors     []string `json:"errors"`
-	Messages   []string `json:"messages"`
-	ResultInfo struct {
-		Count  int
-		Cursor string
-	} `json:"result_info"`
-}
-
-func KvKeys() (kvkeys *KvKeysResponse, err error) {
-	req, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("https://api.cloudflare.com/client/v4/accounts/%s/storage/kv/namespaces/%s/keys", KvAccountId, KvNamespaceId),
-		nil,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", KvToken))
-	resp, err := HttpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("kv api response status: %s", resp.Status)
-	}
-
-	kvkeys = new(KvKeysResponse)
-	err = json.NewDecoder(resp.Body).Decode(kvkeys)
-	if err != nil {
-		return nil, fmt.Errorf("Decode: %w", err)
-	}
-
-	return kvkeys, nil
-}
-
 func tgescape(text string) string {
 	// https://core.telegram.org/bots/api#markdownv2-style
 	return strings.NewReplacer(
@@ -1084,10 +525,10 @@ func tgescape(text string) string {
 
 func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 	var offset int64
-	if len(TgUpdateLog) > 0 {
-		offset = TgUpdateLog[len(TgUpdateLog)-1] + 1
+	if len(Config.TgUpdateLog) > 0 {
+		offset = Config.TgUpdateLog[len(Config.TgUpdateLog)-1] + 1
 	}
-	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", TgApiUrlBase, TgToken, offset)
+	getUpdatesUrl := fmt.Sprintf("%s/bot%s/getUpdates?offset=%d", Config.TgApiUrlBase, Config.TgToken, offset)
 
 	var tgResp TgGetUpdatesResponse
 	err = getJson(getUpdatesUrl, &tgResp, &tgrespjson)
@@ -1102,7 +543,7 @@ func tggetUpdates() (uu []TgUpdate, tgrespjson string, err error) {
 }
 
 func tggetChat(chatid int64) (chat TgChat, err error) {
-	getChatUrl := fmt.Sprintf("%s/bot%s/getChat?chat_id=%d", TgApiUrlBase, TgToken, chatid)
+	getChatUrl := fmt.Sprintf("%s/bot%s/getChat?chat_id=%d", Config.TgApiUrlBase, Config.TgToken, chatid)
 	var tgResp TgGetChatResponse
 
 	tries := []int{1, 2, 3}
@@ -1147,7 +588,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 
 	var tgresp TgPromoteChatMemberResponse
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/promoteChatMember", TgApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/promoteChatMember", Config.TgApiUrlBase, Config.TgToken),
 		bytes.NewBuffer(promoteChatMemberJSON),
 		&tgresp,
 	)
@@ -1163,7 +604,7 @@ func tgpromoteChatMember(chatid, userid int64) (bool, error) {
 }
 
 func tggetChatAdministrators(chatid int64) (mm []TgChatMember, err error) {
-	getChatAdministratorsUrl := fmt.Sprintf("%s/bot%s/getChatAdministrators?chat_id=%d", TgApiUrlBase, TgToken, chatid)
+	getChatAdministratorsUrl := fmt.Sprintf("%s/bot%s/getChatAdministrators?chat_id=%d", Config.TgApiUrlBase, Config.TgToken, chatid)
 	var tgResp TgGetChatAdministratorsResponse
 
 	err = getJson(getChatAdministratorsUrl, &tgResp, nil)
@@ -1207,22 +648,17 @@ func processTgUpdates() {
 			}
 		*/
 
-		if slices.Contains(TgUpdateLog, u.UpdateId) {
+		if slices.Contains(Config.TgUpdateLog, u.UpdateId) {
 			log("WARNING this telegram update id:%d was already processed, skipping", u.UpdateId)
 			continue
 		}
 
-		TgUpdateLog = append(TgUpdateLog, u.UpdateId)
-		if len(TgUpdateLog) > TgUpdateLogSize {
-			TgUpdateLog = TgUpdateLog[len(TgUpdateLog)-TgUpdateLogSize:]
+		Config.TgUpdateLog = append(Config.TgUpdateLog, u.UpdateId)
+		if len(Config.TgUpdateLog) > Config.TgUpdateLogMaxSize {
+			Config.TgUpdateLog = Config.TgUpdateLog[len(Config.TgUpdateLog)-Config.TgUpdateLogMaxSize:]
 		}
-
-		TgUpdateLogString := []string{}
-		for _, i := range TgUpdateLog {
-			TgUpdateLogString = append(TgUpdateLogString, fmt.Sprintf("%d", i))
-		}
-		if err := SetVar("TgUpdateLog", strings.Join(TgUpdateLogString, " ")); err != nil {
-			log("WARNING SetVar TgUpdateLog: %v", err)
+		if err := Config.Put(); err != nil {
+			log("ERROR Config.Put: %s", err)
 		}
 
 		var iseditmessage bool
@@ -1265,13 +701,13 @@ func processTgUpdates() {
 				cmu.OldChatMember.User.Username, cmu.OldChatMember.User.Id, cmu.OldChatMember.Status,
 				cmu.NewChatMember.User.Username, cmu.NewChatMember.User.Id, cmu.NewChatMember.Status,
 			)
-			_, err = tgsendMessage(report, TgZeChatId, "MarkdownV2", 0)
+			_, err = tgsendMessage(report, Config.TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 			}
 		} else {
 			log("WARNING unsupported type of update id:%d received:"+NL+"%s", u.UpdateId, respjson)
-			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), TgZeChatId, "MarkdownV2", 0)
+			_, err = tgsendMessage(fmt.Sprintf("unsupported type of update (id:%d) received:"+NL+"```"+NL+"%s"+NL+"```", u.UpdateId, respjson), Config.TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("WARNING tgsendMessage: %v", err)
 				continue
@@ -1285,28 +721,16 @@ func processTgUpdates() {
 
 		if ischannelpost {
 			add := true
-			for _, i := range TgAllChannelsChatIds {
+			for _, i := range Config.TgAllChannelsChatIds {
 				if m.Chat.Id == i {
 					add = false
 				}
 			}
 			if add {
-				TgAllChannelsChatIds = append(TgAllChannelsChatIds, m.Chat.Id)
-			}
-
-			sort.Slice(TgAllChannelsChatIds, func(i, j int) bool { return TgAllChannelsChatIds[i] < TgAllChannelsChatIds[j] })
-			ss := []string{}
-			for _, i := range TgAllChannelsChatIds {
-				ss = append(ss, fmt.Sprintf("%d", i))
-			}
-			TgAllChannelsChatIdsString := strings.Join(ss, " ")
-
-			if v, err := GetVar("TgAllChannelsChatIds"); err != nil {
-				log("ERROR GetVar TgAllChannelsChatIds: %v", err)
-				continue
-			} else if v != TgAllChannelsChatIdsString {
-				if err := SetVar("TgAllChannelsChatIds", TgAllChannelsChatIdsString); err != nil {
-					log("WARNING SetVar TgAllChannelsChatIds: %v", err)
+				Config.TgAllChannelsChatIds = append(Config.TgAllChannelsChatIds, m.Chat.Id)
+				sort.Slice(Config.TgAllChannelsChatIds, func(i, j int) bool { return Config.TgAllChannelsChatIds[i] < Config.TgAllChannelsChatIds[j] })
+				if err := Config.Put(); err != nil {
+					log("ERROR Config.Put: %s", err)
 				}
 			}
 		}
@@ -1317,14 +741,14 @@ func processTgUpdates() {
 		}
 
 		shouldreport := true
-		if m.From.Id == TgZeChatId {
+		if m.From.Id == Config.TgZeChatId {
 			shouldreport = false
 		}
 		var chatadmins string
 		if aa, err := tggetChatAdministrators(m.Chat.Id); err == nil {
 			for _, a := range aa {
 				chatadmins += fmt.Sprintf("username:@%s id:%d status:%s  ", a.User.Username, a.User.Id, a.Status)
-				if a.User.Id == TgZeChatId {
+				if a.User.Id == Config.TgZeChatId {
 					shouldreport = false
 				}
 			}
@@ -1348,7 +772,7 @@ func processTgUpdates() {
 				iseditmessage,
 				m.Text,
 			)
-			_, err = tgsendMessage(report, TgZeChatId, "MarkdownV2", 0)
+			_, err = tgsendMessage(report, Config.TgZeChatId, "MarkdownV2", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 				continue
@@ -1365,10 +789,10 @@ func processTgUpdates() {
 			}
 		}
 
-		if strings.TrimSpace(m.Text) == TgCommandChannels {
+		if strings.TrimSpace(m.Text) == Config.TgCommandChannels {
 			var totalchannels, removedchannels int
-			totalchannels = len(TgAllChannelsChatIds)
-			for _, i := range TgAllChannelsChatIds {
+			totalchannels = len(Config.TgAllChannelsChatIds)
+			for _, i := range Config.TgAllChannelsChatIds {
 				var err error
 				c, getChatErr := tggetChat(i)
 				if getChatErr != nil {
@@ -1404,9 +828,9 @@ func processTgUpdates() {
 			}
 		}
 
-		if strings.TrimSpace(m.Text) == TgCommandChannelsPromoteAdmin {
+		if strings.TrimSpace(m.Text) == Config.TgCommandChannelsPromoteAdmin {
 			var total, totalok int
-			for _, i := range TgAllChannelsChatIds {
+			for _, i := range Config.TgAllChannelsChatIds {
 				success, err := tgpromoteChatMember(i, m.From.Id)
 				total++
 				if success != true || err != nil {
@@ -1422,20 +846,20 @@ func processTgUpdates() {
 			}
 		}
 
-		if strings.TrimSpace(m.Text) == TgQuest1 {
-			_, err = tgsendMessage(TgQuest1Key, m.Chat.Id, "", 0)
+		if strings.TrimSpace(m.Text) == Config.TgQuest1 {
+			_, err = tgsendMessage(Config.TgQuest1Key, m.Chat.Id, "", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 			}
 		}
-		if strings.TrimSpace(m.Text) == TgQuest2 {
-			_, err = tgsendMessage(TgQuest2Key, m.Chat.Id, "", 0)
+		if strings.TrimSpace(m.Text) == Config.TgQuest2 {
+			_, err = tgsendMessage(Config.TgQuest2Key, m.Chat.Id, "", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 			}
 		}
-		if strings.TrimSpace(m.Text) == TgQuest3 {
-			_, err = tgsendMessage(TgQuest3Key, m.Chat.Id, "", 0)
+		if strings.TrimSpace(m.Text) == Config.TgQuest3 {
+			_, err = tgsendMessage(Config.TgQuest3Key, m.Chat.Id, "", 0)
 			if err != nil {
 				log("tgsendMessage: %v", err)
 			}
@@ -1449,13 +873,13 @@ func processTgUpdates() {
 
 		var videos []YtVideo
 
-		if mm := ytlistRe.FindStringSubmatch(m.Text); len(mm) > 1 {
+		if mm := YtListRe.FindStringSubmatch(m.Text); len(mm) > 1 {
 			videos, err = getList(mm[1])
 			if err != nil {
 				log("getList: %v", err)
 				continue
 			}
-		} else if mm := ytRe.FindStringSubmatch(m.Text); len(mm) > 1 {
+		} else if mm := YtRe.FindStringSubmatch(m.Text); len(mm) > 1 {
 			videos = []YtVideo{YtVideo{Id: mm[1]}}
 		}
 
@@ -1538,7 +962,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		log("format: ContentLength:%dmb Language:%#v", f.ContentLength>>20, flang)
 		if flang != "" {
 			skip := true
-			for _, l := range DownloadLanguages {
+			for _, l := range Config.YtDownloadLanguages {
 				if strings.Contains(flang, l) {
 					skip = false
 				}
@@ -1550,7 +974,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		if videoSmallestFormat.ItagNo == 0 || f.Bitrate < videoSmallestFormat.Bitrate {
 			videoSmallestFormat = f
 		}
-		if fsize < TgMaxFileSizeBytes && f.Bitrate > videoFormat.Bitrate {
+		if fsize < Config.TgMaxFileSizeBytes && f.Bitrate > videoFormat.Bitrate {
 			videoFormat = f
 		}
 	}
@@ -1558,7 +982,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	var targetVideoBitrateKbps int64
 	if videoFormat.ItagNo == 0 {
 		videoFormat = videoSmallestFormat
-		targetVideoSize := int64(TgMaxFileSizeBytes - (TgAudioBitrateKbps*1024*int64(vinfo.Duration.Seconds()+1))/8)
+		targetVideoSize := int64(Config.TgMaxFileSizeBytes - (Config.TgAudioBitrateKbps*1024*int64(vinfo.Duration.Seconds()+1))/8)
 		targetVideoBitrateKbps = int64(((targetVideoSize * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
@@ -1598,7 +1022,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("os.OpenFile: %w", err)
 	}
 
-	if DEBUG {
+	if Config.DEBUG {
 		downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel)
 		if v.PlaylistId != "" && v.PlaylistTitle != "" {
 			downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
@@ -1622,10 +1046,10 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log("downloaded youtu.be/%s video in %v", v.Id, time.Since(t0).Truncate(time.Second))
-	if DEBUG {
+	if Config.DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %s"+NL+"downloaded video in %v", vinfo.Title, v.Id, vinfo.Duration, videoFormat.QualityLabel, time.Since(t0).Truncate(time.Second))
 		if targetVideoBitrateKbps > 0 {
-			downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps video:%dkbps", TgAudioBitrateKbps, targetVideoBitrateKbps)
+			downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps video:%dkbps", Config.TgAudioBitrateKbps, targetVideoBitrateKbps)
 		}
 		downloadedmessage, err := tgsendMessage(downloadedmessagetext, m.Chat.Id, "", 0)
 		if err == nil && downloadedmessage != nil {
@@ -1633,13 +1057,13 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}
 
-	if FfmpegPath != "" && targetVideoBitrateKbps > 0 {
-		filename2 := fmt.Sprintf("%s.%s.v%dk.a%dk.mp4", ts(), v.Id, targetVideoBitrateKbps, TgAudioBitrateKbps)
-		err := FfmpegTranscode(tgvideoFilename, filename2, targetVideoBitrateKbps, TgAudioBitrateKbps)
+	if Config.FfmpegPath != "" && targetVideoBitrateKbps > 0 {
+		filename2 := fmt.Sprintf("%s.%s.v%dk.a%dk.mp4", ts(), v.Id, targetVideoBitrateKbps, Config.TgAudioBitrateKbps)
+		err := FfmpegTranscode(tgvideoFilename, filename2, targetVideoBitrateKbps, Config.TgAudioBitrateKbps)
 		if err != nil {
 			return fmt.Errorf("FfmpegTranscode `%s`: %w", tgvideoFilename, err)
 		}
-		tgvideoCaption += NL + fmt.Sprintf("(transcoded to video:%dkbps audio:%dkbps)", targetVideoBitrateKbps, TgAudioBitrateKbps)
+		tgvideoCaption += NL + fmt.Sprintf("(transcoded to video:%dkbps audio:%dkbps)", targetVideoBitrateKbps, Config.TgAudioBitrateKbps)
 		if err := os.Remove(tgvideoFilename); err != nil {
 			log("os.Remove `%s`: %v", tgvideoFilename, err)
 		}
@@ -1703,7 +1127,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		log("format: ContentLength:%dmb Language:%#v", f.ContentLength>>20, flang)
 		if flang != "" {
 			skip := true
-			for _, l := range DownloadLanguages {
+			for _, l := range Config.YtDownloadLanguages {
 				if strings.Contains(flang, l) {
 					skip = false
 				}
@@ -1715,7 +1139,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		if audioSmallestFormat.ItagNo == 0 || f.Bitrate < audioSmallestFormat.Bitrate {
 			audioSmallestFormat = f
 		}
-		if fsize < TgMaxFileSizeBytes && f.Bitrate > audioFormat.Bitrate {
+		if fsize < Config.TgMaxFileSizeBytes && f.Bitrate > audioFormat.Bitrate {
 			audioFormat = f
 		}
 	}
@@ -1723,7 +1147,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	var targetAudioBitrateKbps int64
 	if audioFormat.ItagNo == 0 {
 		audioFormat = audioSmallestFormat
-		targetAudioBitrateKbps = int64(((TgMaxFileSizeBytes * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
+		targetAudioBitrateKbps = int64(((Config.TgMaxFileSizeBytes * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
 	ytstream, ytstreamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &audioFormat)
@@ -1765,7 +1189,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		return fmt.Errorf("create file: %w", err)
 	}
 
-	if DEBUG {
+	if Config.DEBUG {
 		downloadingmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloading", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024)
 		if v.PlaylistId != "" && v.PlaylistTitle != "" {
 			downloadingmessagetext = fmt.Sprintf("%d/%d %s "+NL, v.PlaylistIndex+1, v.PlaylistSize, v.PlaylistTitle) + downloadingmessagetext
@@ -1789,7 +1213,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 	}
 
 	log("downloaded youtu.be/%s audio in %v", v.Id, time.Since(t0).Truncate(time.Second))
-	if DEBUG {
+	if Config.DEBUG {
 		downloadedmessagetext := fmt.Sprintf("%s"+NL+"youtu.be/%s %s %dkbps"+NL+"downloaded audio in %s", vinfo.Title, v.Id, vinfo.Duration, audioFormat.Bitrate/1024, time.Since(t0).Truncate(time.Second))
 		if targetAudioBitrateKbps > 0 {
 			downloadedmessagetext += NL + fmt.Sprintf("transcoding to audio:%dkbps", targetAudioBitrateKbps)
@@ -1800,7 +1224,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		}
 	}
 
-	if FfmpegPath != "" && targetAudioBitrateKbps > 0 {
+	if Config.FfmpegPath != "" && targetAudioBitrateKbps > 0 {
 		filename2 := fmt.Sprintf("%s.%s.a%dk.m4a", ts(), v.Id, targetAudioBitrateKbps)
 		err := FfmpegTranscode(tgaudioFilename, filename2, 0, targetAudioBitrateKbps)
 		if err != nil {
@@ -1850,7 +1274,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 
 func getList(ytlistid string) (ytitems []YtVideo, err error) {
 	// https://developers.google.com/youtube/v3/docs/playlists
-	var PlaylistUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlists?maxResults=%d&part=snippet&id=%s&key=%s", YtMaxResults, ytlistid, YtKey)
+	var PlaylistUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlists?maxResults=%d&part=snippet&id=%s&key=%s", Config.YtMaxResults, ytlistid, Config.YtKey)
 	var playlists YtPlaylists
 	err = getJson(PlaylistUrl, &playlists, nil)
 	if err != nil {
@@ -1873,7 +1297,7 @@ func getList(ytlistid string) (ytitems []YtVideo, err error) {
 
 	for nextPageToken != "" || len(videos) == 0 {
 		// https://developers.google.com/youtube/v3/docs/playlistItems
-		var PlaylistItemsUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlistItems?maxResults=%d&part=snippet&playlistId=%s&key=%s&pageToken=%s", YtMaxResults, ytlistid, YtKey, nextPageToken)
+		var PlaylistItemsUrl = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlistItems?maxResults=%d&part=snippet&playlistId=%s&key=%s&pageToken=%s", Config.YtMaxResults, ytlistid, Config.YtKey, nextPageToken)
 
 		var playlistItems YtPlaylistItems
 		err = getJson(PlaylistItemsUrl, &playlistItems, nil)
@@ -2022,7 +1446,7 @@ func tgsendVideoFile(chatid int64, caption string, video io.Reader, width, heigh
 	t0 := time.Now()
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("%s/bot%s/sendVideo", TgApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendVideo", Config.TgApiUrlBase, Config.TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -2152,7 +1576,7 @@ func tgsendAudioFile(chatid int64, caption string, audio io.Reader, performer, t
 	t0 := time.Now()
 
 	resp, err := HttpClient.Post(
-		fmt.Sprintf("%s/bot%s/sendAudio", TgApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendAudio", Config.TgApiUrlBase, Config.TgToken),
 		mpartw.FormDataContentType(),
 		piper,
 	)
@@ -2208,7 +1632,7 @@ func tgsendMessage(text string, chatid int64, parsemode string, replytomessageid
 
 	var tgresp TgResponse
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/sendMessage", TgApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/sendMessage", Config.TgApiUrlBase, Config.TgToken),
 		bytes.NewBuffer(sendMessageJSON),
 		&tgresp,
 	)
@@ -2237,7 +1661,7 @@ func tgdeleteMessage(chatid, messageid int64) error {
 
 	var tgresp TgResponseShort
 	err = postJson(
-		fmt.Sprintf("%s/bot%s/deleteMessage", TgApiUrlBase, TgToken),
+		fmt.Sprintf("%s/bot%s/deleteMessage", Config.TgApiUrlBase, Config.TgToken),
 		bytes.NewBuffer(deleteMessageJSON),
 		&tgresp,
 	)
@@ -2261,7 +1685,7 @@ func FfmpegTranscode(filename, filename2 string, videoBitrateKbps, audioBitrateK
 		return fmt.Errorf("empty both videoBitrateKbps and audioBitrateKbps")
 	}
 
-	ffmpegArgs := append(FfmpegGlobalOptions,
+	ffmpegArgs := append(Config.FfmpegGlobalOptions,
 		"-i", filename,
 		"-f", "mp4",
 	)
@@ -2281,7 +1705,7 @@ func FfmpegTranscode(filename, filename2 string, videoBitrateKbps, audioBitrateK
 		filename2,
 	)
 
-	ffmpegCmd := exec.Command(FfmpegPath, ffmpegArgs...)
+	ffmpegCmd := exec.Command(Config.FfmpegPath, ffmpegArgs...)
 
 	ffmpegCmdStderrPipe, err := ffmpegCmd.StderrPipe()
 	if err != nil {
@@ -2307,6 +1731,62 @@ func FfmpegTranscode(filename, filename2 string, videoBitrateKbps, audioBitrateK
 	}
 
 	log("transcoded in %v", time.Since(t0).Truncate(time.Second))
+
+	return nil
+}
+
+func (config *TgZeConfig) Get() error {
+	req, err := http.NewRequest(http.MethodGet, config.YssUrl, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("yss response status %s", resp.Status)
+	}
+
+	rbb, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(rbb, config); err != nil {
+		return err
+	}
+
+	if config.DEBUG {
+		log("DEBUG Config.Get: %+v", config)
+	}
+
+	return nil
+}
+
+func (config *TgZeConfig) Put() error {
+	if config.DEBUG {
+		log("DEBUG Config.Put %s %+v", config.YssUrl, config)
+	}
+
+	rbb, err := yaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, config.YssUrl, bytes.NewBuffer(rbb))
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("yss response status %s", resp.Status)
+	}
 
 	return nil
 }
