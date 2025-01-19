@@ -14,13 +14,15 @@ spec:
       name: tgze
       labels:
         app: tgze
+      annotations:
+        checksum/configmap: {{ include ( print $.Template.BasePath "/" "configmap.yaml" ) . | sha256sum }}
 
     spec:
       containers:
 
         - name: tgze
-          imagePullPolicy: IfNotPresent
           image: "{{ $.Values.ImageNameTgZe }}:{{ $.Values.ImageTagTgZe }}"
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: tgze
