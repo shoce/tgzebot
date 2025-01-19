@@ -74,8 +74,8 @@ type TgZeConfig struct {
 	TgMaxFileSizeBytes int64 `yaml:"TgMaxFileSizeBytes"` // = 47 << 20
 	TgAudioBitrateKbps int64 `yaml:"TgAudioBitrateKbps"` // = 60
 
-	FfmpegPath          string   `yaml:"FfmpegPath"` // = "/bin/ffmpeg"
-	FfmpegGlobalOptions []string `yaml:"FfmpegGlobalOptions"`
+	FfmpegPath          string   `yaml:"FfmpegPath"`          // = "/bin/ffmpeg"
+	FfmpegGlobalOptions []string `yaml:"FfmpegGlobalOptions"` // = []{"-v", "error"}
 
 	YtKey        string `yaml:"YtKey"`
 	YtMaxResults int64  `yaml:"YtMaxResults"` // = 50
@@ -88,7 +88,7 @@ type TgZeConfig struct {
 	YtRe     string `yaml:"YtRe"`     // = `(?:youtube.com/watch\?v=|youtu.be/|youtube.com/shorts/|youtube.com/live/)([0-9A-Za-z_-]+)`
 	YtListRe string `yaml:"YtListRe"` // = `youtube.com/playlist\?list=([0-9A-Za-z_-]+)`
 
-	YtDownloadLanguages []string `yaml:"YtDownloadLanguages"`
+	YtDownloadLanguages []string `yaml:"YtDownloadLanguages"` // = []string{"english", "german", "russian", "ukrainian"}
 }
 
 var (
