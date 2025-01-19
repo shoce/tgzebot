@@ -14,8 +14,10 @@ spec:
       name: tgze
       labels:
         app: tgze
+
     spec:
       containers:
+
         - name: tgze
           imagePullPolicy: IfNotPresent
           image: "{{ $.Values.ImageNameTgZe }}:{{ $.Values.ImageTagTgZe }}"
