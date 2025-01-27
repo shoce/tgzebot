@@ -75,7 +75,7 @@ type TgZeConfig struct {
 	TgAudioBitrateKbps int64 `yaml:"TgAudioBitrateKbps"` // = 60
 
 	FfmpegPath          string   `yaml:"FfmpegPath"`          // = "/bin/ffmpeg"
-	FfmpegGlobalOptions []string `yaml:"FfmpegGlobalOptions"` // = []{"-v", "error"}
+	FfmpegGlobalOptions []string `yaml:"FfmpegGlobalOptions"` // = []string{"-v", "error"}
 
 	YtKey        string `yaml:"YtKey"`
 	YtMaxResults int64  `yaml:"YtMaxResults"` // = 50
