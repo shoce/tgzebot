@@ -98,7 +98,7 @@ var (
 
 	Config TgZeConfig
 
-	YtdlCl           ytdl.Client
+	YtdlCl         ytdl.Client
 	YtRe, YtListRe *regexp.Regexp
 )
 
@@ -140,8 +140,6 @@ func init() {
 		os.Exit(1)
 	}
 
-	var proxyTransport http.RoundTripper = http.DefaultTransport
-
 	if Config.TgToken == "" {
 		log("ERROR TgToken empty")
 		os.Exit(1)
@@ -181,7 +179,7 @@ func main() {
 	for {
 		t0 := time.Now()
 
-		YtdlCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, Config.YtHttpClientUserAgent}}}
+		YtdlCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{http.DefaultTransport, Config.YtHttpClientUserAgent}}}
 		processTgUpdates()
 
 		if dur := time.Now().Sub(t0); dur < Config.Interval {
@@ -439,13 +437,13 @@ type YtVideo struct {
 }
 
 type UserAgentTransport struct {
-	T     http.RoundTripper
-	Agent string
+	Transport http.RoundTripper
+	UserAgent string
 }
 
 func (uat *UserAgentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("User-Agent", uat.Agent)
-	return uat.T.RoundTrip(req)
+	req.Header.Set("User-Agent", uat.UserAgent)
+	return uat.Transport.RoundTrip(req)
 }
 
 func getJson(url string, target interface{}, respjson *string) (err error) {
