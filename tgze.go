@@ -98,7 +98,7 @@ var (
 
 	Config TgZeConfig
 
-	YtCl           ytdl.Client
+	YtdlCl           ytdl.Client
 	YtRe, YtListRe *regexp.Regexp
 )
 
@@ -141,7 +141,6 @@ func init() {
 	}
 
 	var proxyTransport http.RoundTripper = http.DefaultTransport
-	YtCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, Config.YtHttpClientUserAgent}}}
 
 	if Config.TgToken == "" {
 		log("ERROR TgToken empty")
@@ -181,7 +180,10 @@ func main() {
 
 	for {
 		t0 := time.Now()
+
+		YtdlCl = ytdl.Client{HTTPClient: &http.Client{Transport: &UserAgentTransport{proxyTransport, Config.YtHttpClientUserAgent}}}
 		processTgUpdates()
+
 		if dur := time.Now().Sub(t0); dur < Config.Interval {
 			time.Sleep(Config.Interval - dur)
 		}
@@ -888,7 +890,7 @@ func processTgUpdates() {
 			var postingerr error
 			var vinfo *ytdl.Video
 			for _, v := range videos {
-				vinfo, err = YtCl.GetVideoContext(Ctx, v.Id)
+				vinfo, err = YtdlCl.GetVideoContext(Ctx, v.Id)
 				if err != nil {
 					log("ERROR GetVideoContext: %v", err)
 					postingerr = err
@@ -986,7 +988,7 @@ func postVideo(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		targetVideoBitrateKbps = int64(((targetVideoSize * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
-	ytstream, ytstreamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &videoFormat)
+	ytstream, ytstreamsize, err := YtdlCl.GetStreamContext(Ctx, vinfo, &videoFormat)
 	if err != nil {
 		return fmt.Errorf("GetStreamContext: %w", err)
 	}
@@ -1154,7 +1156,7 @@ func postAudio(v YtVideo, vinfo *ytdl.Video, m TgMessage) error {
 		targetAudioBitrateKbps = int64(((Config.TgMaxFileSizeBytes * 8) / int64(vinfo.Duration.Seconds()+1)) / 1024)
 	}
 
-	ytstream, ytstreamsize, err := YtCl.GetStreamContext(Ctx, vinfo, &audioFormat)
+	ytstream, ytstreamsize, err := YtdlCl.GetStreamContext(Ctx, vinfo, &audioFormat)
 	if err != nil {
 		return fmt.Errorf("GetStreamContext: %w", err)
 	}
