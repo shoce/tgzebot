@@ -112,6 +112,7 @@ func init() {
 		log("ERROR YssUrl empty")
 		os.Exit(1)
 	}
+	log("YssUrl==%v", Config.YssUrl)
 
 	if err := Config.Get(); err != nil {
 		log("ERROR Config.Get: %v", err)
